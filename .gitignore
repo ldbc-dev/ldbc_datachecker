@@ -1,0 +1,10 @@
+# Package Files #
+*.class
+*.jar
+.project
+.classpath
+.settings/
+.gitignore~
+*.class
+target/
+README.md~
