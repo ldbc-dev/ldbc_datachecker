@@ -33,8 +33,7 @@ public class SocialNetCheck implements Check
         Check socialNetCheck = new SocialNetCheck( dataDirectory, idsShouldIncrementBy, personCount );
         CheckRunner directoryChecker = new CheckRunner( dataDirectory, socialNetCheck );
         CheckResult result = directoryChecker.check();
-        String resultMessage = ( result.isSuccess() ) ? "Pass" : String.format( "Fail\n%s", result.getMessage() );
-        System.out.println( String.format( "Data check complete\n%s", resultMessage ) );
+        System.out.println( result );
     }
 
     private final File dataDirectory;
@@ -147,7 +146,8 @@ public class SocialNetCheck implements Check
         // Person.id|email
         // TODO email = isString().withAccents( false ).withRegex(
         // SocialNet.emailAddressRegex() )
-        fileChecks.add( new ExpectedColumns( inDir( "person_email_emailaddress.csv" ), isLong(), isString() ) );
+        fileChecks.add( new ExpectedColumns( inDir( "person_email_emailaddress.csv" ), isLong(),
+                isString().withAccents( false ).withRegex( SocialNet.emailAddressRegex() ) ) );
 
         // Person.id|Tag.id
         fileChecks.add( new ExpectedColumns( inDir( "person_hasInterest_tag.csv" ), isLong(), isLong() ) );

@@ -80,7 +80,7 @@ public class SocialNet
     public static String emailAddressRegex()
     {
         // TODO \p{Space} and \p{L} should only be temporary
-        return String.format( "^[\\d\\w\\.\\-_]*@[\\p{Space}\\w\\-]*\\.(%s)$",
+        return String.format( "^[\\d\\w\\.\\-_]*@[\\d\\w\\-]*\\.(%s)$",
                 stringsToRegexOR( joinArrays( languages(), domains() ) ) );
     }
 

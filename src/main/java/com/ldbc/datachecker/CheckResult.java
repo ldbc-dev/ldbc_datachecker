@@ -33,4 +33,10 @@ public class CheckResult
     {
         return message;
     }
+
+    @Override
+    public String toString()
+    {
+        return ( success ) ? "Pass" : String.format( "Fail\n%s", message );
+    }
 }
