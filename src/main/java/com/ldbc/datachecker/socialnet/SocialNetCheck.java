@@ -21,7 +21,9 @@ public class SocialNetCheck implements Check
 {
     public static void main( String[] args )
     {
-        File dataDirectory = new File( "/home/alex/workspace/java/ldbc_socialnet_bm/ldbc_socialnet_dbgen/outputDir/" );
+        // "/home/alex/workspace/java/ldbc_socialnet_bm/ldbc_socialnet_dbgen/outputDir/"
+        String dataDirectoryPath = args[0];
+        File dataDirectory = new File( dataDirectoryPath );
         // TODO 1l
         long idsShouldIncrementBy = 10;
         long personCount = 5000;
