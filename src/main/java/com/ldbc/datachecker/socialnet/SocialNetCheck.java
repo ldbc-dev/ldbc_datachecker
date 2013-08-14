@@ -22,11 +22,11 @@ public class SocialNetCheck implements Check
     public static void main( String[] args )
     {
         // "/home/alex/workspace/java/ldbc_socialnet_bm/ldbc_socialnet_dbgen/outputDir/"
-        String dataDirectoryPath = args[0];
-        File dataDirectory = new File( dataDirectoryPath );
+        File dataDirectory = new File( args[0] );
+        long personCount = Long.parseLong( args[1] );
+
         // TODO 1l
         long idsShouldIncrementBy = 10;
-        long personCount = 5000;
 
         Check socialNetCheck = new SocialNetCheck( dataDirectory, idsShouldIncrementBy, personCount );
         CheckRunner checker = new CheckRunner( dataDirectory, socialNetCheck );
