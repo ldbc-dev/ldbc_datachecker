@@ -1,27 +1,27 @@
 package com.ldbc.datachecker;
 
-// TODO make message->value, make String->T, using value to hold result
-public class CheckResult
+public class CheckResult<T>
 {
-    private final static CheckResult PASS = new CheckResult( true, "" );
     private final boolean success;
     private final String message;
+    private final T value;
 
-    public static CheckResult pass()
+    public static <T1> CheckResult<T1> pass( T1 value )
     {
-        return PASS;
+        return new CheckResult<T1>( true, null, value );
     }
 
-    public static CheckResult fail( String message )
+    public static <T1> CheckResult<T1> fail( String message )
     {
-        return new CheckResult( false, message );
+        return new CheckResult<T1>( false, message, null );
     }
 
-    private CheckResult( boolean success, String message )
+    private CheckResult( boolean success, String message, T value )
     {
         super();
         this.success = success;
         this.message = message;
+        this.value = value;
     }
 
     public boolean isSuccess()
@@ -32,6 +32,11 @@ public class CheckResult
     public String getMessage()
     {
         return message;
+    }
+
+    public T getValue()
+    {
+        return value;
     }
 
     @Override

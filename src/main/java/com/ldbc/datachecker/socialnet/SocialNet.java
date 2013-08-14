@@ -2,6 +2,8 @@ package com.ldbc.datachecker.socialnet;
 
 import java.io.File;
 
+import com.ldbc.datachecker.utils.Utils;
+
 public class SocialNet
 {
     public static String[] allCsvFilenames( File directory )
@@ -18,7 +20,7 @@ public class SocialNet
                 "post_isLocatedIn_place.csv", "tagclass_isSubclassOf_tagclass.csv", "tag_hasType_tagclass.csv",
                 "organisation_isLocatedIn_place.csv" };
 
-        return prefixElementsWith( filenames, directory.getAbsolutePath() + "/" );
+        return Utils.prefixArrayElementsWith( filenames, directory.getAbsolutePath() + "/" );
     }
 
     public static String[] placeTypes()
@@ -47,7 +49,7 @@ public class SocialNet
 
     public static String[] languages( boolean optional )
     {
-        return ( true == optional ) ? joinArrays( new String[] { "" }, languages() ) : languages();
+        return ( true == optional ) ? Utils.joinArrays( new String[] { "" }, languages() ) : languages();
     }
 
     public static String[] languages()
@@ -61,27 +63,15 @@ public class SocialNet
                 "cy", "bs", "hy", "sh", "sq", "ms", "hz" };
     }
 
-    public static String[] domains()
-    {
-        // TODO get from file
-        return new String[] { "com", "info", "net", "biz", "org", "org.ua" };
-    }
-
     public static String locationIpRegex()
     {
         return "^\\d{1,3}+\\.\\d{1,3}+\\.\\d{1,3}+\\.\\d{1,3}$";
     }
 
-    public static String imageFileRegex()
+    public static String imageFileRegex( boolean optional )
     {
-        return "()|(.*\\.jpg$)";
-    }
-
-    public static String emailAddressRegex()
-    {
-        // TODO \p{Space} and \p{L} should only be temporary
-        return String.format( "^[\\d\\w\\.\\-_]*@[\\d\\w\\-]*\\.(%s)$",
-                stringsToRegexOR( joinArrays( languages(), domains() ) ) );
+        String imagePattern = ".*\\.jpg$";
+        return ( false == optional ) ? imagePattern : "|" + imagePattern;
     }
 
     public static String dateTimeFormat()
@@ -92,34 +82,5 @@ public class SocialNet
     public static String dateFormat()
     {
         return "yyyy-MM-dd";
-    }
-
-    private static String stringsToRegexOR( String[] strings )
-    {
-        StringBuilder languagesRegex = new StringBuilder();
-        for ( int i = 0; i < strings.length - 1; i++ )
-        {
-            languagesRegex.append( strings[i] ).append( "|" );
-        }
-        languagesRegex.append( strings[strings.length - 1] );
-        return languagesRegex.toString();
-    }
-
-    private static String[] joinArrays( String[] array1, String[] array2 )
-    {
-        String[] resultArray = new String[array1.length + array2.length];
-        System.arraycopy( array1, 0, resultArray, 0, array1.length );
-        System.arraycopy( array2, 0, resultArray, array1.length, array2.length );
-        return resultArray;
-    }
-
-    private static String[] prefixElementsWith( String[] array, String prefix )
-    {
-        String[] prefixedArray = new String[array.length];
-        for ( int i = 0; i < array.length; i++ )
-        {
-            prefixedArray[i] = prefix + array[i];
-        }
-        return prefixedArray;
     }
 }

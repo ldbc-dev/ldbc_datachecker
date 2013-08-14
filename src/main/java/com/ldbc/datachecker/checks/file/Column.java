@@ -3,15 +3,49 @@ package com.ldbc.datachecker.checks.file;
 import java.text.Normalizer;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.regex.Pattern;
 
 import org.apache.commons.validator.routines.UrlValidator;
 
 import com.ldbc.datachecker.CheckResult;
+import com.ldbc.datachecker.utils.Utils;
 
-public abstract class Column
+public abstract class Column<T>
 {
-    public abstract CheckResult check( String columnString );
+    private ColumnRef<T> saveToColumnRef = new ColumnRef.NothingColumnRef<T>( "save" );
+    private ColumnRef<T> checkInColumnRef = new ColumnRef.NothingColumnRef<T>( "check" );
+
+    public final CheckResult<T> check( String columnString )
+    {
+        CheckResult<T> result = doCheck( columnString );
+        saveToColumnRef.add( result.getValue() );
+        if ( result.isSuccess() )
+        {
+            if ( checkInColumnRef.contains( result.getValue() ) )
+                return result;
+            else
+            {
+                return CheckResult.fail( String.format( "Value %s not found in ColumnRef[%s]", result.getValue(),
+                        checkInColumnRef.getName() ) );
+            }
+        }
+        return result;
+    }
+
+    protected abstract CheckResult<T> doCheck( String columnString );
+
+    public final Column<T> saveRefTo( ColumnRef<T> columnRef )
+    {
+        this.saveToColumnRef = columnRef;
+        return this;
+    }
+
+    public final Column<T> checkRefIn( ColumnRef<T> columnRef )
+    {
+        this.checkInColumnRef = columnRef;
+        return this;
+    }
 
     /*
      * Column API
@@ -37,6 +71,11 @@ public abstract class Column
         return new UrlColumn();
     }
 
+    public static EmailAddressColumn isEmailAddress()
+    {
+        return new EmailAddressColumn();
+    }
+
     public static FiniteSetColumn isFiniteSet( String... validValues )
     {
         return new FiniteSetColumn( validValues );
@@ -51,7 +90,7 @@ public abstract class Column
      * Column Types
      */
 
-    public abstract static class NumberColumn<T extends Number> extends Column
+    public abstract static class NumberColumn<T extends Number> extends Column<T>
     {
         private T min;
         private boolean checkMin = false;
@@ -92,34 +131,34 @@ public abstract class Column
         protected abstract boolean greaterThan( T t1, T t2 );
 
         @Override
-        public CheckResult check( String columnString )
+        public CheckResult<T> doCheck( String columnString )
         {
             try
             {
-                T val = parse( columnString );
-                if ( checkMin && lessThan( val, min ) )
+                T value = parse( columnString );
+                if ( checkMin && lessThan( value, min ) )
                 {
-                    return CheckResult.fail( String.format( "%s outside of range (%s,%s)", val, min, max ) );
+                    return CheckResult.fail( String.format( "%s outside of range (%s,%s)", value, min, max ) );
                 }
-                if ( checkMax && greaterThan( val, max ) )
+                if ( checkMax && greaterThan( value, max ) )
                 {
-                    return CheckResult.fail( String.format( "%s outside of range (%s,%s)", val, min, max ) );
+                    return CheckResult.fail( String.format( "%s outside of range (%s,%s)", value, min, max ) );
                 }
                 if ( checkConsecutive )
                 {
-                    if ( false == nextExpectedValue.equals( val ) )
+                    if ( false == nextExpectedValue.equals( value ) )
                     {
                         return CheckResult.fail( String.format( "Values should be consecutive, expected %s found %s",
-                                nextExpectedValue, val ) );
+                                nextExpectedValue, value ) );
                     }
                     nextExpectedValue = sum( nextExpectedValue, incrementBy );
                 }
+                return CheckResult.pass( value );
             }
             catch ( NumberFormatException e )
             {
                 return CheckResult.fail( String.format( "Invalid number format [%s]", columnString ) );
             }
-            return CheckResult.pass();
         }
     }
 
@@ -179,7 +218,7 @@ public abstract class Column
 
     }
 
-    public static class StringColumn extends Column
+    public static class StringColumn extends Column<String>
     {
         private Pattern regex = null;
         private boolean keepAccents = true;
@@ -190,6 +229,7 @@ public abstract class Column
             return this;
         }
 
+        // TODO remove?
         public StringColumn withAccents( boolean keepAccents )
         {
             this.keepAccents = keepAccents;
@@ -203,46 +243,70 @@ public abstract class Column
         }
 
         @Override
-        public CheckResult check( String columnString )
+        public CheckResult<String> doCheck( String columnString )
         {
             if ( null == regex )
             {
-                return CheckResult.pass();
+                return CheckResult.pass( columnString );
             }
             if ( false == keepAccents )
             {
                 columnString = removeAccents( columnString );
             }
-            return ( regex.matcher( columnString ).matches() ) ? CheckResult.pass() : CheckResult.fail( String.format(
-                    "Invalid string pattern, expected: %s", regex.toString() ) );
+            if ( regex.matcher( columnString ).matches() )
+            {
+                return CheckResult.pass( columnString );
+            }
+            else
+            {
+                return CheckResult.fail( String.format( "Invalid string pattern, expected: %s", regex.toString() ) );
+            }
         }
     }
 
-    public static class FiniteSetColumn extends Column
+    public static class EmailAddressColumn extends Column<String>
+    {
+        private final Pattern regex = Pattern.compile( "^[\\d\\w\\.\\-_]+@[[\\d\\w\\-]+\\.]+\\w{2,4}$" );
+
+        @Override
+        public CheckResult<String> doCheck( String columnString )
+        {
+            if ( regex.matcher( columnString ).matches() )
+            {
+                return CheckResult.pass( columnString );
+            }
+            else
+            {
+                return CheckResult.fail( String.format( "Invalid email address pattern, expected: %s", regex.toString() ) );
+            }
+        }
+    }
+
+    public static class FiniteSetColumn extends Column<String>
     {
         private Pattern regex = null;
 
         public FiniteSetColumn( String... validValues )
         {
-            StringBuilder regexString = new StringBuilder();
-            for ( int i = 0; i < validValues.length - 1; i++ )
-            {
-                regexString.append( validValues[i] ).append( "|" );
-            }
-            regexString.append( validValues[validValues.length - 1] );
-            this.regex = Pattern.compile( regexString.toString() );
+            this.regex = Pattern.compile( Utils.stringArrayToRegexOR( validValues ) );
         }
 
         @Override
-        public CheckResult check( String columnString )
+        public CheckResult<String> doCheck( String columnString )
         {
-            return ( regex.matcher( columnString ).matches() ) ? CheckResult.pass() : CheckResult.fail( String.format(
-                    "Invalid string pattern, expected: %s", regex.toString() ) );
+            if ( regex.matcher( columnString ).matches() )
+            {
+                return CheckResult.pass( columnString );
+            }
+            else
+            {
+                return CheckResult.fail( String.format( "Invalid string pattern, expected: %s", regex.toString() ) );
+            }
         }
     }
 
     // TODO withRange(start,end) like min/max
-    public static class DateColumn extends Column
+    public static class DateColumn extends Column<Date>
     {
         /*
         See http://docs.oracle.com/javase/6/docs/api/java/text/SimpleDateFormat.html 
@@ -267,12 +331,12 @@ public abstract class Column
         }
 
         @Override
-        public CheckResult check( String columnString )
+        public CheckResult<Date> doCheck( String columnString )
         {
             try
             {
-                dateFormat.parse( columnString );
-                return CheckResult.pass();
+                Date value = dateFormat.parse( columnString );
+                return CheckResult.pass( value );
             }
             catch ( ParseException e )
             {
@@ -281,7 +345,7 @@ public abstract class Column
         }
     }
 
-    public static class UrlColumn extends Column
+    public static class UrlColumn extends Column<String>
     {
         // private String encoding = null;
         private boolean keepAccents = true;
@@ -301,6 +365,7 @@ public abstract class Column
         // return this;
         // }
 
+        // TODO remove?
         public UrlColumn withAccents( boolean keepAccents )
         {
             this.keepAccents = keepAccents;
@@ -350,7 +415,7 @@ public abstract class Column
         }
 
         @Override
-        public CheckResult check( String columnString )
+        public CheckResult<String> doCheck( String columnString )
         {
             // if ( null != encoding )
             // {
@@ -372,7 +437,7 @@ public abstract class Column
 
             if ( urlValidator.isValid( columnString ) )
             {
-                return CheckResult.pass();
+                return CheckResult.pass( columnString );
             }
             else
             {

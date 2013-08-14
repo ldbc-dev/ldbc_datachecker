@@ -8,11 +8,11 @@ import com.ldbc.datachecker.DirectoryCheck;
 public class IsDirectory implements DirectoryCheck
 {
     @Override
-    public CheckResult check( String path )
+    public CheckResult<?> check( String path )
     {
         if ( new File( path ).isDirectory() )
         {
-            return CheckResult.pass();
+            return CheckResult.pass( null );
         }
         else
         {

@@ -8,7 +8,7 @@ public interface FileCheck
 
     public int startLine();
 
-    public CheckResult checkLine( String[] columns );
+    public CheckResult<?> checkLine( String[] columns );
 
-    public CheckResult checkFile();
+    public CheckResult<?> checkFile();
 }

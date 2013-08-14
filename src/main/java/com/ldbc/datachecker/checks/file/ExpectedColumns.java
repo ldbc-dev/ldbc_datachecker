@@ -9,14 +9,14 @@ public class ExpectedColumns implements FileCheck
 {
     private final int startLine;
     private final File forFile;
-    private final Column[] columns;
+    private final Column<?>[] columns;
 
-    public ExpectedColumns( String filename, Column... columns )
+    public ExpectedColumns( String filename, Column<?>... columns )
     {
         this( filename, 1, columns );
     }
 
-    public ExpectedColumns( String filename, int startLine, Column... columns )
+    public ExpectedColumns( String filename, int startLine, Column<?>... columns )
     {
         this.forFile = new File( filename );
         this.startLine = startLine;
@@ -36,27 +36,28 @@ public class ExpectedColumns implements FileCheck
     }
 
     @Override
-    public CheckResult checkLine( String[] columns )
+    public CheckResult<?> checkLine( String[] stringColumns )
     {
-        if ( this.columns.length != columns.length )
+        if ( this.columns.length != stringColumns.length )
         {
             return CheckResult.fail( String.format( "Expected %s columns but found %s", this.columns.length,
-                    columns.length ) );
+                    stringColumns.length ) );
         }
         for ( int i = 0; i < this.columns.length; i++ )
         {
-            CheckResult result = this.columns[i].check( columns[i] );
+            CheckResult<?> result = this.columns[i].check( stringColumns[i] );
             if ( false == result.isSuccess() )
             {
-                return CheckResult.fail( String.format( "Column %s %s\n%s", i, columns[i], result.getMessage() ) );
+                return CheckResult.fail( String.format( "Column[%s] - %s - %s\n%s", i,
+                        columns[i].getClass().getSimpleName(), stringColumns[i], result.getMessage() ) );
             }
         }
-        return CheckResult.pass();
+        return CheckResult.pass( null );
     }
 
     @Override
-    public CheckResult checkFile()
+    public CheckResult<?> checkFile()
     {
-        return CheckResult.pass();
+        return CheckResult.pass( null );
     }
 }
