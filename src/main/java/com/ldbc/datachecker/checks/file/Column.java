@@ -266,7 +266,9 @@ public abstract class Column<T>
 
     public static class EmailAddressColumn extends Column<String>
     {
-        private final Pattern regex = Pattern.compile( "^[\\d\\w\\.\\-_]+@[[\\d\\w\\-]+\\.]+\\w{2,4}$" );
+        // private final Pattern regex = Pattern.compile(
+        // "^[\\d\\w\\.\\-_]+@[[\\d\\w\\-]+\\.]+\\w{2,4}$" );
+        private final Pattern regex = Pattern.compile( "^\\w+([\\.\\-]\\w+)*@\\w+([\\.\\-]\\w+)*\\.\\w{2,4}$" );
 
         @Override
         public CheckResult<String> doCheck( String columnString )

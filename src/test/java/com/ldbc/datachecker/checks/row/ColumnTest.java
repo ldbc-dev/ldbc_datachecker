@@ -4,6 +4,8 @@ import static com.ldbc.datachecker.checks.file.Column.*;
 import static org.junit.Assert.*;
 import static org.hamcrest.CoreMatchers.*;
 
+import java.util.Date;
+
 import org.junit.Test;
 
 import com.ldbc.datachecker.checks.file.Column;
@@ -14,9 +16,9 @@ public class ColumnTest
     public void integerColumnShouldOnlyPassWithInteger()
     {
         // Given
-        Column column = isInteger();
-        Column columnWithMinMax = isInteger().withMin( 0 ).withMax( 2 );
-        Column columnWithConsecutive = isInteger().withConsecutive( 1, 1 );
+        Column<Integer> column = isInteger();
+        Column<Integer> columnWithMinMax = isInteger().withMin( 0 ).withMax( 2 );
+        Column<Integer> columnWithConsecutive = isInteger().withConsecutive( 1, 1 );
 
         // When
         String normalPositive1Int = "1";
@@ -45,8 +47,8 @@ public class ColumnTest
     public void longColumnShouldOnlyPassWithLong()
     {
         // Given
-        Column column = isLong();
-        Column columnWithMinMax = isLong().withMin( 0l ).withMax( 2l );
+        Column<Long> column = isLong();
+        Column<Long> columnWithMinMax = isLong().withMin( 0l ).withMax( 2l );
 
         // When
         String normalPositiveLong = "1";
@@ -67,8 +69,8 @@ public class ColumnTest
     public void stringColumnShouldOnlyPassWithString()
     {
         // Given
-        Column column = isString();
-        Column columnWithPattern = isString().withRegex( "string1|string2" );
+        Column<String> column = isString();
+        Column<String> columnWithPattern = isString().withRegex( "string1|string2" );
 
         // When
         String string1 = "string1";
@@ -87,7 +89,7 @@ public class ColumnTest
     public void finiteSetColumnShouldOnlyPassWithFiniteSet()
     {
         // Given
-        Column column = isFiniteSet( "one", "two", "three" );
+        Column<String> column = isFiniteSet( "one", "two", "three" );
 
         // When
         String valid1 = "one";
@@ -111,10 +113,10 @@ public class ColumnTest
     public void urlColumnShouldOnlyPassWithUrl()
     {
         // Given
-        Column urlColumn = isUrl();
+        Column<String> urlColumn = isUrl();
         // Column urlColumnWithAsciiConversion = isUrl().withEncoding( "UTF-8"
         // );
-        Column urlColumnWithoutAccents = isUrl().withAccents( false );
+        Column<String> urlColumnWithoutAccents = isUrl().withAccents( false );
 
         // When
         String validUrl = "http://dbpedia.org/resource/Sao_Paulo";
@@ -147,7 +149,7 @@ public class ColumnTest
     public void dateColumnShouldOnlyPassWithDate()
     {
         // Given
-        Column dateColumn = isDate( "yyyy-MM-dd'T'HH:mm:ss'Z'" );
+        Column<Date> dateColumn = isDate( "yyyy-MM-dd'T'HH:mm:ss'Z'" );
 
         // When
         String validDate = "2010-03-11T11:36:58Z";
@@ -156,5 +158,50 @@ public class ColumnTest
         // Then
         assertThat( dateColumn.check( validDate ).isSuccess(), is( true ) );
         assertThat( dateColumn.check( invalidDate ).isSuccess(), is( false ) );
+    }
+
+    @Test
+    public void emailColumnShouldOnlyPassWithEmail()
+    {
+        // Given
+        Column<String> emailColumn = isEmailAddress();
+
+        // When
+        String valid1 = "aA1@aA1-_.aA1.ab";
+        String valid2 = "aA1@aA1-_.aA1.abc";
+        String valid3 = "aA1@aA1-_.aA1.abcd";
+        String valid4 = "aA1-_.aA1-_.aA1-_.aA1@aA1-_.aA1-_.aA1-_.aA1.ab";
+        String valid5 = "aA1-_.aA1-_.aA1-_.aA1@aA1-_.aA1-_.aA1-_.aA1.abc";
+        String valid6 = "aA1-_.aA1-_.aA1-_.aA1@aA1-_.aA1-_.aA1-_.aA1.abcd";
+
+        String invalid1 = "aA1@aA1-_.aA1.a";
+        String invalid2 = "aA1@aA1-_.aA1.abcde";
+        String invalid3 = "aA1.@aA1-_.aA1.ab";
+        String invalid4 = "aA1-@aA1-_.aA1.ab";
+        String invalid5 = ".aA1@aA1-_.aA1.ab";
+        String invalid6 = "-aA1@aA1-_.aA1.ab";
+        String invalid7 = "aA1@.aA1.ab";
+        String invalid8 = "aA1@-aA1.ab";
+        String invalid9 = "aA1@aA1..ab";
+        String invalid10 = "aA1@aA1-.ab";
+
+        // Then
+        assertThat( emailColumn.check( valid1 ).isSuccess(), is( true ) );
+        assertThat( emailColumn.check( valid2 ).isSuccess(), is( true ) );
+        assertThat( emailColumn.check( valid3 ).isSuccess(), is( true ) );
+        assertThat( emailColumn.check( valid4 ).isSuccess(), is( true ) );
+        assertThat( emailColumn.check( valid5 ).isSuccess(), is( true ) );
+        assertThat( emailColumn.check( valid6 ).isSuccess(), is( true ) );
+
+        assertThat( emailColumn.check( invalid1 ).isSuccess(), is( false ) );
+        assertThat( emailColumn.check( invalid2 ).isSuccess(), is( false ) );
+        assertThat( emailColumn.check( invalid3 ).isSuccess(), is( false ) );
+        assertThat( emailColumn.check( invalid4 ).isSuccess(), is( false ) );
+        assertThat( emailColumn.check( invalid5 ).isSuccess(), is( false ) );
+        assertThat( emailColumn.check( invalid6 ).isSuccess(), is( false ) );
+        assertThat( emailColumn.check( invalid7 ).isSuccess(), is( false ) );
+        assertThat( emailColumn.check( invalid8 ).isSuccess(), is( false ) );
+        assertThat( emailColumn.check( invalid9 ).isSuccess(), is( false ) );
+        assertThat( emailColumn.check( invalid10 ).isSuccess(), is( false ) );
     }
 }
