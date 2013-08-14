@@ -1,4 +1,4 @@
-package com.ldbc.datachecker.checks.file;
+package com.ldbc.datachecker;
 
 import gnu.trove.set.TLongSet;
 import gnu.trove.set.hash.TLongHashSet;

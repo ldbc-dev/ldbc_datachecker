@@ -2,8 +2,10 @@ package com.ldbc.datachecker.checks.file;
 
 import java.io.File;
 
-import com.ldbc.datachecker.CheckResult;
+import com.ldbc.datachecker.Column;
+import com.ldbc.datachecker.ColumnResult;
 import com.ldbc.datachecker.FileCheck;
+import com.ldbc.datachecker.CheckResult;
 
 public class ExpectedColumns implements FileCheck
 {
@@ -36,7 +38,7 @@ public class ExpectedColumns implements FileCheck
     }
 
     @Override
-    public CheckResult<?> checkLine( String[] stringColumns )
+    public CheckResult checkLine( String[] stringColumns )
     {
         if ( this.columns.length != stringColumns.length )
         {
@@ -45,19 +47,19 @@ public class ExpectedColumns implements FileCheck
         }
         for ( int i = 0; i < this.columns.length; i++ )
         {
-            CheckResult<?> result = this.columns[i].check( stringColumns[i] );
+            ColumnResult<?> result = this.columns[i].check( stringColumns[i] );
             if ( false == result.isSuccess() )
             {
                 return CheckResult.fail( String.format( "Column[%s] - %s - %s\n%s", i,
                         columns[i].getClass().getSimpleName(), stringColumns[i], result.getMessage() ) );
             }
         }
-        return CheckResult.pass( null );
+        return CheckResult.pass();
     }
 
     @Override
-    public CheckResult<?> checkFile()
+    public CheckResult checkFile()
     {
-        return CheckResult.pass( null );
+        return CheckResult.pass();
     }
 }

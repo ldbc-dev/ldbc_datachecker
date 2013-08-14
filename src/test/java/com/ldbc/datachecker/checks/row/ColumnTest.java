@@ -1,6 +1,6 @@
 package com.ldbc.datachecker.checks.row;
 
-import static com.ldbc.datachecker.checks.file.Column.*;
+import static com.ldbc.datachecker.Column.*;
 import static org.junit.Assert.*;
 import static org.hamcrest.CoreMatchers.*;
 
@@ -8,7 +8,7 @@ import java.util.Date;
 
 import org.junit.Test;
 
-import com.ldbc.datachecker.checks.file.Column;
+import com.ldbc.datachecker.Column;
 
 public class ColumnTest
 {

@@ -1,6 +1,8 @@
 package com.ldbc.datachecker;
 
+import java.io.File;
+
 public interface DirectoryCheck
 {
-    public CheckResult<?> check( String path );
+    public CheckResult checkDirectory( File directory );
 }

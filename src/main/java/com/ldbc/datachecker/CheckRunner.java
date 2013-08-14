@@ -10,28 +10,29 @@ public class CheckRunner
 
     private final Check check;
     private final File directory;
+    private final FailedCheckPolicy policy;
 
-    public CheckRunner( File directory, Check check )
+    public CheckRunner( File directory, Check check, FailedCheckPolicy policy ) throws CheckException
     {
         this.check = check;
         this.directory = directory;
+        this.policy = policy;
         if ( false == directory.isDirectory() )
         {
-            throw new RuntimeException( "Must be a directory" );
+            throw new CheckException( "Must be a directory" );
         }
     }
 
-    public CheckResult<?> check()
+    public void check() throws CheckException
     {
         // Directory checks
         logger.info( String.format( "Performing directory checks on %s", directory.getAbsolutePath() ) );
         for ( DirectoryCheck directoryCheck : check.getDirectoryChecks() )
         {
-            CheckResult<?> result = directoryCheck.check( directory.getAbsolutePath() );
-            if ( false == result.isSuccess() )
+            CheckResult checkResult = directoryCheck.checkDirectory( directory );
+            if ( false == checkResult.isSuccess() )
             {
-                String errMsg = String.format( "Directory[%s]\n%s", directory.getAbsolutePath(), result.getMessage() );
-                return CheckResult.fail( errMsg );
+                policy.handleFailedDirectoryCheck( directory, checkResult );
             }
         }
 
@@ -39,14 +40,8 @@ public class CheckRunner
         logger.info( "Performing file checks" );
         for ( FileCheck fileCheck : check.getFileChecks() )
         {
-            FileCheckRunner fileCheckRunner = new FileCheckRunner( fileCheck );
-            CheckResult<?> result = fileCheckRunner.check();
-            if ( false == result.isSuccess() )
-            {
-                return CheckResult.fail( result.getMessage() );
-            }
+            FileCheckRunner fileCheckRunner = new FileCheckRunner( policy );
+            fileCheckRunner.checkFile( fileCheck );
         }
-
-        return CheckResult.pass( null );
     }
 }

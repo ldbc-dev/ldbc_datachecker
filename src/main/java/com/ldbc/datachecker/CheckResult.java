@@ -1,27 +1,25 @@
 package com.ldbc.datachecker;
 
-public class CheckResult<T>
+public class CheckResult
 {
     private final boolean success;
     private final String message;
-    private final T value;
 
-    public static <T1> CheckResult<T1> pass( T1 value )
+    public static CheckResult pass()
     {
-        return new CheckResult<T1>( true, null, value );
+        return new CheckResult( true, null );
     }
 
-    public static <T1> CheckResult<T1> fail( String message )
+    public static CheckResult fail( String message )
     {
-        return new CheckResult<T1>( false, message, null );
+        return new CheckResult( false, message );
     }
 
-    private CheckResult( boolean success, String message, T value )
+    private CheckResult( boolean success, String message )
     {
         super();
         this.success = success;
         this.message = message;
-        this.value = value;
     }
 
     public boolean isSuccess()
@@ -32,11 +30,6 @@ public class CheckResult<T>
     public String getMessage()
     {
         return message;
-    }
-
-    public T getValue()
-    {
-        return value;
     }
 
     @Override

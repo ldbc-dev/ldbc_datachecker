@@ -1,4 +1,4 @@
-package com.ldbc.datachecker.utils;
+package com.ldbc.datachecker;
 
 public class Utils
 {

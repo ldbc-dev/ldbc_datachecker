@@ -1,13 +1,13 @@
 package com.ldbc.datachecker.checks.row;
 
-import static com.ldbc.datachecker.checks.file.Column.*;
+import static com.ldbc.datachecker.Column.*;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
 import org.junit.Test;
 
+import com.ldbc.datachecker.Column;
 import com.ldbc.datachecker.FileCheck;
-import com.ldbc.datachecker.checks.file.Column;
 import com.ldbc.datachecker.checks.file.ExpectedColumns;
 
 public class CheckExpectedColumnsTest

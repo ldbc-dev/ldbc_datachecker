@@ -1,6 +1,6 @@
 package com.ldbc.datachecker.socialnet;
 
-import static com.ldbc.datachecker.checks.file.Column.*;
+import static com.ldbc.datachecker.Column.*;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -13,22 +13,22 @@ import java.util.Properties;
 import org.apache.log4j.Logger;
 
 import com.ldbc.datachecker.Check;
-import com.ldbc.datachecker.CheckResult;
+import com.ldbc.datachecker.CheckException;
 import com.ldbc.datachecker.CheckRunner;
+import com.ldbc.datachecker.ColumnRef;
 import com.ldbc.datachecker.DirectoryCheck;
+import com.ldbc.datachecker.FailedCheckPolicy;
 import com.ldbc.datachecker.FileCheck;
-import com.ldbc.datachecker.FileCheckRunner;
 import com.ldbc.datachecker.checks.directory.DirectoryContainsAllAndOnlyExpectedCsvFiles;
-import com.ldbc.datachecker.checks.directory.IsDirectory;
-import com.ldbc.datachecker.checks.file.ColumnRef;
 import com.ldbc.datachecker.checks.file.ExpectedColumns;
 import com.ldbc.datachecker.checks.file.ExpectedLength;
+import com.ldbc.datachecker.failure.TerminateFailedCheckPolicy;
 
 public class SocialNetCheck implements Check
 {
     private static final Logger logger = Logger.getLogger( SocialNetCheck.class );
 
-    public static void main( String[] args ) throws FileNotFoundException, IOException
+    public static void main( String[] args ) throws FileNotFoundException, IOException, CheckException
     {
         logger.info( "LDBC Social Network Data Checker" );
 
@@ -41,15 +41,15 @@ public class SocialNetCheck implements Check
         long personCount = Long.parseLong( (String) dataGenProperties.get( "numtotalUser" ) );
         logger.info( String.format( "Expected Person Count = %s", personCount ) );
 
-        // TODO 1l
+        // TODO 1
         long idsShouldIncrementBy = 10;
 
+        FailedCheckPolicy policy = new TerminateFailedCheckPolicy();
         Check socialNetCheck = new SocialNetCheck( dataDirectory, idsShouldIncrementBy, personCount );
-        CheckRunner checker = new CheckRunner( dataDirectory, socialNetCheck );
+        CheckRunner checkRunner = new CheckRunner( dataDirectory, socialNetCheck, policy );
+        checkRunner.check();
 
-        CheckResult<?> result = checker.check();
-
-        System.out.println( result );
+        logger.info( "Check complete" );
     }
 
     private final File dataDirectory;
@@ -67,7 +67,6 @@ public class SocialNetCheck implements Check
     public List<DirectoryCheck> getDirectoryChecks()
     {
         List<DirectoryCheck> directoryChecks = new ArrayList<DirectoryCheck>();
-        directoryChecks.add( new IsDirectory() );
         directoryChecks.add( new DirectoryContainsAllAndOnlyExpectedCsvFiles( SocialNet.allCsvFilenames( dataDirectory ) ) );
         return directoryChecks;
     }

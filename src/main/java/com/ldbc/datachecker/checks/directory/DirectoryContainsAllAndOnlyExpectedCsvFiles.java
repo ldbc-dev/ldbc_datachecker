@@ -19,10 +19,8 @@ public class DirectoryContainsAllAndOnlyExpectedCsvFiles implements DirectoryChe
     }
 
     @Override
-    public CheckResult<?> check( String path )
+    public CheckResult checkDirectory( File directory )
     {
-        File directory = new File( path );
-
         FilenameFilter filenameFilter = new FilenameFilter()
         {
             public boolean accept( File directory, String fileName )
@@ -39,7 +37,7 @@ public class DirectoryContainsAllAndOnlyExpectedCsvFiles implements DirectoryChe
 
         if ( expectedCsvFiles.equals( foundCsvFiles ) )
         {
-            return CheckResult.pass( null );
+            return CheckResult.pass();
         }
 
         Set<String> expectedAndFound = new HashSet<String>();

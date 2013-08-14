@@ -2,8 +2,8 @@ package com.ldbc.datachecker.checks.file;
 
 import java.io.File;
 
-import com.ldbc.datachecker.CheckResult;
 import com.ldbc.datachecker.FileCheck;
+import com.ldbc.datachecker.CheckResult;
 
 public class ExpectedLength implements FileCheck
 {
@@ -38,16 +38,16 @@ public class ExpectedLength implements FileCheck
     }
 
     @Override
-    public CheckResult<?> checkLine( String[] columns )
+    public CheckResult checkLine( String[] columns )
     {
         lineCount++;
-        return CheckResult.pass( null );
+        return CheckResult.pass();
     }
 
     @Override
-    public CheckResult<?> checkFile()
+    public CheckResult checkFile()
     {
-        return ( lineCount == expectedLineCount ) ? CheckResult.pass( null ) : CheckResult.fail( String.format(
+        return ( lineCount == expectedLineCount ) ? CheckResult.pass() : CheckResult.fail( String.format(
                 "File expected to have %s lines, found %s", expectedLineCount, lineCount ) );
     }
 }

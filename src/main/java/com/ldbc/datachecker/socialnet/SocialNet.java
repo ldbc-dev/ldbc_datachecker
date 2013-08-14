@@ -2,7 +2,7 @@ package com.ldbc.datachecker.socialnet;
 
 import java.io.File;
 
-import com.ldbc.datachecker.utils.Utils;
+import com.ldbc.datachecker.Utils;
 
 public class SocialNet
 {

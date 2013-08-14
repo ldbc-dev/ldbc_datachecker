@@ -1,4 +1,4 @@
-package com.ldbc.datachecker.checks.file;
+package com.ldbc.datachecker;
 
 import java.text.Normalizer;
 import java.text.ParseException;
@@ -8,17 +8,14 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.validator.routines.UrlValidator;
 
-import com.ldbc.datachecker.CheckResult;
-import com.ldbc.datachecker.utils.Utils;
-
 public abstract class Column<T>
 {
     private ColumnRef<T> saveToColumnRef = new ColumnRef.NothingColumnRef<T>( "save" );
     private ColumnRef<T> checkInColumnRef = new ColumnRef.NothingColumnRef<T>( "check" );
 
-    public final CheckResult<T> check( String columnString )
+    public final ColumnResult<T> check( String columnString )
     {
-        CheckResult<T> result = doCheck( columnString );
+        ColumnResult<T> result = doCheck( columnString );
         saveToColumnRef.add( result.getValue() );
         if ( result.isSuccess() )
         {
@@ -26,14 +23,14 @@ public abstract class Column<T>
                 return result;
             else
             {
-                return CheckResult.fail( String.format( "Value %s not found in ColumnRef[%s]", result.getValue(),
+                return ColumnResult.fail( String.format( "Value %s not found in ColumnRef[%s]", result.getValue(),
                         checkInColumnRef.getName() ) );
             }
         }
         return result;
     }
 
-    protected abstract CheckResult<T> doCheck( String columnString );
+    protected abstract ColumnResult<T> doCheck( String columnString );
 
     public final Column<T> saveRefTo( ColumnRef<T> columnRef )
     {
@@ -131,33 +128,33 @@ public abstract class Column<T>
         protected abstract boolean greaterThan( T t1, T t2 );
 
         @Override
-        public CheckResult<T> doCheck( String columnString )
+        public ColumnResult<T> doCheck( String columnString )
         {
             try
             {
                 T value = parse( columnString );
                 if ( checkMin && lessThan( value, min ) )
                 {
-                    return CheckResult.fail( String.format( "%s outside of range (%s,%s)", value, min, max ) );
+                    return ColumnResult.fail( String.format( "%s outside of range (%s,%s)", value, min, max ) );
                 }
                 if ( checkMax && greaterThan( value, max ) )
                 {
-                    return CheckResult.fail( String.format( "%s outside of range (%s,%s)", value, min, max ) );
+                    return ColumnResult.fail( String.format( "%s outside of range (%s,%s)", value, min, max ) );
                 }
                 if ( checkConsecutive )
                 {
                     if ( false == nextExpectedValue.equals( value ) )
                     {
-                        return CheckResult.fail( String.format( "Values should be consecutive, expected %s found %s",
+                        return ColumnResult.fail( String.format( "Values should be consecutive, expected %s found %s",
                                 nextExpectedValue, value ) );
                     }
                     nextExpectedValue = sum( nextExpectedValue, incrementBy );
                 }
-                return CheckResult.pass( value );
+                return ColumnResult.pass( value );
             }
             catch ( NumberFormatException e )
             {
-                return CheckResult.fail( String.format( "Invalid number format [%s]", columnString ) );
+                return ColumnResult.fail( String.format( "Invalid number format [%s]", columnString ) );
             }
         }
     }
@@ -243,11 +240,11 @@ public abstract class Column<T>
         }
 
         @Override
-        public CheckResult<String> doCheck( String columnString )
+        public ColumnResult<String> doCheck( String columnString )
         {
             if ( null == regex )
             {
-                return CheckResult.pass( columnString );
+                return ColumnResult.pass( columnString );
             }
             if ( false == keepAccents )
             {
@@ -255,11 +252,11 @@ public abstract class Column<T>
             }
             if ( regex.matcher( columnString ).matches() )
             {
-                return CheckResult.pass( columnString );
+                return ColumnResult.pass( columnString );
             }
             else
             {
-                return CheckResult.fail( String.format( "Invalid string pattern, expected: %s", regex.toString() ) );
+                return ColumnResult.fail( String.format( "Invalid string pattern, expected: %s", regex.toString() ) );
             }
         }
     }
@@ -271,15 +268,16 @@ public abstract class Column<T>
         private final Pattern regex = Pattern.compile( "^\\w+([\\.\\-]\\w+)*@\\w+([\\.\\-]\\w+)*\\.\\w{2,4}$" );
 
         @Override
-        public CheckResult<String> doCheck( String columnString )
+        public ColumnResult<String> doCheck( String columnString )
         {
             if ( regex.matcher( columnString ).matches() )
             {
-                return CheckResult.pass( columnString );
+                return ColumnResult.pass( columnString );
             }
             else
             {
-                return CheckResult.fail( String.format( "Invalid email address pattern, expected: %s", regex.toString() ) );
+                return ColumnResult.fail( String.format( "Invalid email address pattern, expected: %s",
+                        regex.toString() ) );
             }
         }
     }
@@ -294,15 +292,15 @@ public abstract class Column<T>
         }
 
         @Override
-        public CheckResult<String> doCheck( String columnString )
+        public ColumnResult<String> doCheck( String columnString )
         {
             if ( regex.matcher( columnString ).matches() )
             {
-                return CheckResult.pass( columnString );
+                return ColumnResult.pass( columnString );
             }
             else
             {
-                return CheckResult.fail( String.format( "Invalid string pattern, expected: %s", regex.toString() ) );
+                return ColumnResult.fail( String.format( "Invalid string pattern, expected: %s", regex.toString() ) );
             }
         }
     }
@@ -333,16 +331,16 @@ public abstract class Column<T>
         }
 
         @Override
-        public CheckResult<Date> doCheck( String columnString )
+        public ColumnResult<Date> doCheck( String columnString )
         {
             try
             {
                 Date value = dateFormat.parse( columnString );
-                return CheckResult.pass( value );
+                return ColumnResult.pass( value );
             }
             catch ( ParseException e )
             {
-                return CheckResult.fail( String.format( "%s has invalid date format\n%s", columnString, e.getMessage() ) );
+                return ColumnResult.fail( String.format( "%s has invalid date format\n%s", columnString, e.getMessage() ) );
             }
         }
     }
@@ -417,7 +415,7 @@ public abstract class Column<T>
         }
 
         @Override
-        public CheckResult<String> doCheck( String columnString )
+        public ColumnResult<String> doCheck( String columnString )
         {
             // if ( null != encoding )
             // {
@@ -427,7 +425,8 @@ public abstract class Column<T>
             // }
             // catch ( Exception e )
             // {
-            // return CheckResult.fail( String.format( "URL encoding failed - ",
+            // return ColumnResult.fail( String.format(
+            // "URL encoding failed - ",
             // e.getMessage() ) );
             // }
             // }
@@ -439,11 +438,11 @@ public abstract class Column<T>
 
             if ( urlValidator.isValid( columnString ) )
             {
-                return CheckResult.pass( columnString );
+                return ColumnResult.pass( columnString );
             }
             else
             {
-                return CheckResult.fail( String.format( "Invalid URL: %s", columnString ) );
+                return ColumnResult.fail( String.format( "Invalid URL: %s", columnString ) );
             }
         }
     }
