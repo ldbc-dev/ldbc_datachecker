@@ -3,14 +3,21 @@ package com.ldbc.datachecker.socialnet;
 import static com.ldbc.datachecker.checks.file.Column.*;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
+
+import org.apache.log4j.Logger;
 
 import com.ldbc.datachecker.Check;
 import com.ldbc.datachecker.CheckResult;
 import com.ldbc.datachecker.CheckRunner;
 import com.ldbc.datachecker.DirectoryCheck;
 import com.ldbc.datachecker.FileCheck;
+import com.ldbc.datachecker.FileCheckRunner;
 import com.ldbc.datachecker.checks.directory.DirectoryContainsAllAndOnlyExpectedCsvFiles;
 import com.ldbc.datachecker.checks.directory.IsDirectory;
 import com.ldbc.datachecker.checks.file.ColumnRef;
@@ -19,11 +26,20 @@ import com.ldbc.datachecker.checks.file.ExpectedLength;
 
 public class SocialNetCheck implements Check
 {
-    public static void main( String[] args )
+    private static final Logger logger = Logger.getLogger( SocialNetCheck.class );
+
+    public static void main( String[] args ) throws FileNotFoundException, IOException
     {
-        // "/home/alex/workspace/java/ldbc_socialnet_bm/ldbc_socialnet_dbgen/outputDir/"
-        File dataDirectory = new File( args[0] );
-        long personCount = Long.parseLong( args[1] );
+        logger.info( "LDBC Social Network Data Checker" );
+
+        // "/home/alex/workspace/java/ldbc_socialnet_bm/ldbc_socialnet_dbgen/"
+        File dataGenDirectory = new File( args[0] );
+        File dataDirectory = new File( dataGenDirectory, "outputDir/" );
+        Properties dataGenProperties = new Properties();
+        dataGenProperties.load( new FileInputStream( new File( dataGenDirectory, "params.ini" ) ) );
+
+        long personCount = Long.parseLong( (String) dataGenProperties.get( "numtotalUser" ) );
+        logger.info( String.format( "Expected Person Count = %s", personCount ) );
 
         // TODO 1l
         long idsShouldIncrementBy = 10;
