@@ -9,6 +9,10 @@ import java.util.Date;
 import org.junit.Test;
 
 import com.ldbc.datachecker.Column;
+import com.ldbc.datachecker.ColumnCheckException;
+import com.ldbc.datachecker.FailedCheckPolicy;
+import com.ldbc.datachecker.checks.file.ExpectedLength;
+import com.ldbc.datachecker.failure.TerminateFailedCheckPolicy;
 
 public class ColumnTest
 {
@@ -30,17 +34,16 @@ public class ColumnTest
         String notAnInt = "a string";
 
         // Then
-        assertThat( column.check( normalPositive1Int ).isSuccess(), is( true ) );
-        assertThat( column.check( normalNegative1Int ).isSuccess(), is( true ) );
-        assertThat( column.check( biggerThanInt ).isSuccess(), is( false ) );
-        assertThat( column.check( notAnInt ).isSuccess(), is( false ) );
-        assertThat( columnWithMinMax.check( normalPositive1Int ).isSuccess(), is( true ) );
-        assertThat( columnWithMinMax.check( normalNegative1Int ).isSuccess(), is( false ) );
-        assertThat( columnWithConsecutive.check( normalPositive1Int ).isSuccess(), is( true ) );
-        assertThat( columnWithConsecutive.check( normalPositive2Int ).isSuccess(), is( true ) );
-        assertThat( columnWithConsecutive.check( normalPositive3Int ).isSuccess(), is( true ) );
-        assertThat( columnWithConsecutive.check( normalPositive4Int ).isSuccess(), is( true ) );
-        assertThat( columnWithConsecutive.check( normalPositive3Int ).isSuccess(), is( false ) );
+        assertThat( columnCheckPassed( column, normalNegative1Int ), is( true ) );
+        assertThat( columnCheckPassed( column, biggerThanInt ), is( false ) );
+        assertThat( columnCheckPassed( column, notAnInt ), is( false ) );
+        assertThat( columnCheckPassed( columnWithMinMax, normalPositive1Int ), is( true ) );
+        assertThat( columnCheckPassed( columnWithMinMax, normalNegative1Int ), is( false ) );
+        assertThat( columnCheckPassed( columnWithConsecutive, normalPositive1Int ), is( true ) );
+        assertThat( columnCheckPassed( columnWithConsecutive, normalPositive2Int ), is( true ) );
+        assertThat( columnCheckPassed( columnWithConsecutive, normalPositive3Int ), is( true ) );
+        assertThat( columnCheckPassed( columnWithConsecutive, normalPositive4Int ), is( true ) );
+        assertThat( columnCheckPassed( columnWithConsecutive, normalPositive3Int ), is( false ) );
     }
 
     @Test
@@ -57,12 +60,12 @@ public class ColumnTest
         String notALong = "a string";
 
         // Then
-        assertThat( column.check( normalPositiveLong ).isSuccess(), is( true ) );
-        assertThat( column.check( normalNegativeLong ).isSuccess(), is( true ) );
-        assertThat( column.check( biggerThanLong ).isSuccess(), is( false ) );
-        assertThat( column.check( notALong ).isSuccess(), is( false ) );
-        assertThat( columnWithMinMax.check( normalPositiveLong ).isSuccess(), is( true ) );
-        assertThat( columnWithMinMax.check( normalNegativeLong ).isSuccess(), is( false ) );
+        assertThat( columnCheckPassed( column, normalPositiveLong ), is( true ) );
+        assertThat( columnCheckPassed( column, normalNegativeLong ), is( true ) );
+        assertThat( columnCheckPassed( column, biggerThanLong ), is( false ) );
+        assertThat( columnCheckPassed( column, notALong ), is( false ) );
+        assertThat( columnCheckPassed( columnWithMinMax, normalPositiveLong ), is( true ) );
+        assertThat( columnCheckPassed( columnWithMinMax, normalNegativeLong ), is( false ) );
     }
 
     @Test
@@ -78,12 +81,12 @@ public class ColumnTest
         String string3 = "string3";
 
         // Then
-        assertThat( column.check( string1 ).isSuccess(), is( true ) );
-        assertThat( column.check( string2 ).isSuccess(), is( true ) );
-        assertThat( column.check( string3 ).isSuccess(), is( true ) );
-        assertThat( columnWithPattern.check( string1 ).isSuccess(), is( true ) );
-        assertThat( columnWithPattern.check( string2 ).isSuccess(), is( true ) );
-        assertThat( columnWithPattern.check( string3 ).isSuccess(), is( false ) );
+        assertThat( columnCheckPassed( column, string1 ), is( true ) );
+        assertThat( columnCheckPassed( column, string2 ), is( true ) );
+        assertThat( columnCheckPassed( column, string3 ), is( true ) );
+        assertThat( columnCheckPassed( columnWithPattern, string1 ), is( true ) );
+        assertThat( columnCheckPassed( columnWithPattern, string2 ), is( true ) );
+        assertThat( columnCheckPassed( columnWithPattern, string3 ), is( false ) );
     }
 
     public void finiteSetColumnShouldOnlyPassWithFiniteSet()
@@ -100,12 +103,12 @@ public class ColumnTest
         String invalid3 = "";
 
         // Then
-        assertThat( column.check( valid1 ).isSuccess(), is( true ) );
-        assertThat( column.check( valid2 ).isSuccess(), is( true ) );
-        assertThat( column.check( valid3 ).isSuccess(), is( true ) );
-        assertThat( column.check( invalid1 ).isSuccess(), is( false ) );
-        assertThat( column.check( invalid2 ).isSuccess(), is( false ) );
-        assertThat( column.check( invalid3 ).isSuccess(), is( false ) );
+        assertThat( columnCheckPassed( column, valid1 ), is( true ) );
+        assertThat( columnCheckPassed( column, valid2 ), is( true ) );
+        assertThat( columnCheckPassed( column, valid3 ), is( true ) );
+        assertThat( columnCheckPassed( column, invalid1 ), is( false ) );
+        assertThat( columnCheckPassed( column, invalid2 ), is( false ) );
+        assertThat( columnCheckPassed( column, invalid3 ), is( false ) );
     }
 
     // 2010-03-11T11:36:58Z
@@ -126,23 +129,23 @@ public class ColumnTest
         String urlWithStangeL = "http://dbpedia.org/resource/Pułtusk_Academy_of_Humanities";
 
         // Then
-        assertThat( urlColumn.check( validUrl ).isSuccess(), is( true ) );
-        assertThat( urlColumn.check( validUrlWithSpecialCharacters ).isSuccess(), is( false ) );
-        assertThat( urlColumn.check( invalidUrlWithUmlaut ).isSuccess(), is( false ) );
-        assertThat( urlColumn.check( urlWithUmlautAndHyphen ).isSuccess(), is( false ) );
-        assertThat( urlColumn.check( urlWithStangeL ).isSuccess(), is( false ) );
-        // assertThat( urlColumnWithAsciiConversion.check( validUrl
-        // ).isSuccess(), is( true ) );
+        assertThat( columnCheckPassed( urlColumn, validUrl ), is( true ) );
+        assertThat( columnCheckPassed( urlColumn, validUrlWithSpecialCharacters ), is( false ) );
+        assertThat( columnCheckPassed( urlColumn, invalidUrlWithUmlaut ), is( false ) );
+        assertThat( columnCheckPassed( urlColumn, urlWithUmlautAndHyphen ), is( false ) );
+        assertThat( columnCheckPassed( urlColumn, urlWithStangeL ), is( false ) );
+        // assertThat( urlColumnWithAsciiConversion,validUrl
+        // ), is( true ) );
         // assertThat( urlColumnWithAsciiConversion.check(
-        // validUrlWithSpecialCharacters ).isSuccess(), is( true ) );
-        // assertThat( urlColumnWithAsciiConversion.check( invalidUrlWithUmlaut
-        // ).isSuccess(), is( false ) );
-        assertThat( urlColumnWithoutAccents.check( validUrl ).isSuccess(), is( true ) );
-        assertThat( urlColumnWithoutAccents.check( validUrlWithSpecialCharacters ).isSuccess(), is( true ) );
-        assertThat( urlColumnWithoutAccents.check( invalidUrlWithUmlaut ).isSuccess(), is( false ) );
-        assertThat( urlColumnWithoutAccents.check( urlWithUmlautAndHyphen ).isSuccess(), is( true ) );
-        // assertThat( urlColumnWithoutAccents.check( urlWithStangeL
-        // ).isSuccess(), is( true ) );
+        // validUrlWithSpecialCharacters ), is( true ) );
+        // assertThat( urlColumnWithAsciiConversion,invalidUrlWithUmlaut
+        // ), is( false ) );
+        assertThat( columnCheckPassed( urlColumnWithoutAccents, validUrl ), is( true ) );
+        assertThat( columnCheckPassed( urlColumnWithoutAccents, validUrlWithSpecialCharacters ), is( true ) );
+        assertThat( columnCheckPassed( urlColumnWithoutAccents, invalidUrlWithUmlaut ), is( false ) );
+        assertThat( columnCheckPassed( urlColumnWithoutAccents, urlWithUmlautAndHyphen ), is( true ) );
+        // assertThat( urlColumnWithoutAccents,urlWithStangeL
+        // ), is( true ) );
     }
 
     @Test
@@ -156,8 +159,8 @@ public class ColumnTest
         String invalidDate = "2010-03-11T11:36:58+0200";
 
         // Then
-        assertThat( dateColumn.check( validDate ).isSuccess(), is( true ) );
-        assertThat( dateColumn.check( invalidDate ).isSuccess(), is( false ) );
+        assertThat( columnCheckPassed( dateColumn, validDate ), is( true ) );
+        assertThat( columnCheckPassed( dateColumn, invalidDate ), is( false ) );
     }
 
     @Test
@@ -186,22 +189,39 @@ public class ColumnTest
         String invalid10 = "aA1@aA1-.ab";
 
         // Then
-        assertThat( emailColumn.check( valid1 ).isSuccess(), is( true ) );
-        assertThat( emailColumn.check( valid2 ).isSuccess(), is( true ) );
-        assertThat( emailColumn.check( valid3 ).isSuccess(), is( true ) );
-        assertThat( emailColumn.check( valid4 ).isSuccess(), is( true ) );
-        assertThat( emailColumn.check( valid5 ).isSuccess(), is( true ) );
-        assertThat( emailColumn.check( valid6 ).isSuccess(), is( true ) );
+        assertThat( columnCheckPassed( emailColumn, valid1 ), is( true ) );
+        assertThat( columnCheckPassed( emailColumn, valid2 ), is( true ) );
+        assertThat( columnCheckPassed( emailColumn, valid3 ), is( true ) );
+        assertThat( columnCheckPassed( emailColumn, valid4 ), is( true ) );
+        assertThat( columnCheckPassed( emailColumn, valid5 ), is( true ) );
+        assertThat( columnCheckPassed( emailColumn, valid6 ), is( true ) );
 
-        assertThat( emailColumn.check( invalid1 ).isSuccess(), is( false ) );
-        assertThat( emailColumn.check( invalid2 ).isSuccess(), is( false ) );
-        assertThat( emailColumn.check( invalid3 ).isSuccess(), is( false ) );
-        assertThat( emailColumn.check( invalid4 ).isSuccess(), is( false ) );
-        assertThat( emailColumn.check( invalid5 ).isSuccess(), is( false ) );
-        assertThat( emailColumn.check( invalid6 ).isSuccess(), is( false ) );
-        assertThat( emailColumn.check( invalid7 ).isSuccess(), is( false ) );
-        assertThat( emailColumn.check( invalid8 ).isSuccess(), is( false ) );
-        assertThat( emailColumn.check( invalid9 ).isSuccess(), is( false ) );
-        assertThat( emailColumn.check( invalid10 ).isSuccess(), is( false ) );
+        assertThat( columnCheckPassed( emailColumn, invalid1 ), is( false ) );
+        assertThat( columnCheckPassed( emailColumn, invalid2 ), is( false ) );
+        assertThat( columnCheckPassed( emailColumn, invalid3 ), is( false ) );
+        assertThat( columnCheckPassed( emailColumn, invalid4 ), is( false ) );
+        assertThat( columnCheckPassed( emailColumn, invalid5 ), is( false ) );
+        assertThat( columnCheckPassed( emailColumn, invalid6 ), is( false ) );
+        assertThat( columnCheckPassed( emailColumn, invalid7 ), is( false ) );
+        assertThat( columnCheckPassed( emailColumn, invalid8 ), is( false ) );
+        assertThat( columnCheckPassed( emailColumn, invalid9 ), is( false ) );
+        assertThat( columnCheckPassed( emailColumn, invalid10 ), is( false ) );
+    }
+
+    private boolean columnCheckPassed( Column<?> columnCheck, String columnString )
+    {
+        FailedCheckPolicy policy = new TerminateFailedCheckPolicy();
+
+        boolean checkPassed = true;
+        try
+        {
+            columnCheck.check( policy.getFailedColumnCheckPolicy( new ExpectedLength( "", 1 ), 1, new String[] {} ),
+                    columnString );
+        }
+        catch ( ColumnCheckException e )
+        {
+            checkPassed = false;
+        }
+        return checkPassed;
     }
 }

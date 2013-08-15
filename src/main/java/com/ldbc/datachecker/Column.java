@@ -8,31 +8,42 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.validator.routines.UrlValidator;
 
+import com.ldbc.datachecker.FailedCheckPolicy.FailedColumnCheckPolicy;
+
 public abstract class Column<T>
 {
     private ColumnRef<T> saveToColumnRef = new ColumnRef.NothingColumnRef<T>( "save" );
     private ColumnRef<T> checkInColumnRef = new ColumnRef.NothingColumnRef<T>( "check" );
 
-    public final ColumnResult<T> check( String columnString )
+    public final void check( FailedColumnCheckPolicy policy, String columnString ) throws ColumnCheckException
     {
-        ColumnResult<T> result = doCheck( columnString );
-        saveToColumnRef.add( result.getValue() );
-        if ( result.isSuccess() )
+        try
         {
-            if ( checkInColumnRef.contains( result.getValue() ) )
-                return result;
-            else
+            T value = parse( columnString );
+            // TODO do not always add, this is a hack for now
+            saveToColumnRef.add( value );
+
+            // TODO do not always check, this is a hack for now
+            if ( false == checkInColumnRef.contains( value ) )
             {
-                return ColumnResult.fail( String.format( "Value %s not found in ColumnRef[%s]", result.getValue(),
-                        checkInColumnRef.getName() ) );
+                String errMsg = String.format( "Value %s not found in ColumnRef[%s]", value, checkInColumnRef.getName() );
+                policy.handleFailedColumnCheck( columnString, errMsg );
             }
+
+            doCheck( policy, value );
         }
-        return result;
+        catch ( ColumnParseException e )
+        {
+            policy.handleFailedColumnCheck( columnString,
+                    String.format( "Failed to parse [%s] - %s", columnString, e.getMessage() ) );
+        }
     }
 
-    protected abstract ColumnResult<T> doCheck( String columnString );
+    public abstract T parse( String columnString ) throws ColumnParseException;
 
-    public final Column<T> saveRefTo( ColumnRef<T> columnRef )
+    protected abstract void doCheck( FailedColumnCheckPolicy policy, T columnValue ) throws ColumnCheckException;
+
+    public Column<T> saveRefTo( ColumnRef<T> columnRef )
     {
         this.saveToColumnRef = columnRef;
         return this;
@@ -119,8 +130,6 @@ public abstract class Column<T>
             return this;
         }
 
-        protected abstract T parse( String columnString ) throws NumberFormatException;
-
         protected abstract T sum( T t1, T t2 );
 
         protected abstract boolean lessThan( T t1, T t2 );
@@ -128,33 +137,29 @@ public abstract class Column<T>
         protected abstract boolean greaterThan( T t1, T t2 );
 
         @Override
-        public ColumnResult<T> doCheck( String columnString )
+        protected void doCheck( FailedColumnCheckPolicy policy, T columnValue ) throws ColumnCheckException
         {
             try
             {
-                T value = parse( columnString );
-                if ( checkMin && lessThan( value, min ) )
+                if ( ( checkMin && lessThan( columnValue, min ) ) || ( checkMax && greaterThan( columnValue, max ) ) )
                 {
-                    return ColumnResult.fail( String.format( "%s outside of range (%s,%s)", value, min, max ) );
+                    policy.handleFailedColumnCheck( columnValue.toString(),
+                            String.format( "%s outside of range (%s,%s)", columnValue, min, max ) );
                 }
-                if ( checkMax && greaterThan( value, max ) )
+                if ( true == checkConsecutive )
                 {
-                    return ColumnResult.fail( String.format( "%s outside of range (%s,%s)", value, min, max ) );
-                }
-                if ( checkConsecutive )
-                {
-                    if ( false == nextExpectedValue.equals( value ) )
+                    if ( false == nextExpectedValue.equals( columnValue ) )
                     {
-                        return ColumnResult.fail( String.format( "Values should be consecutive, expected %s found %s",
-                                nextExpectedValue, value ) );
+                        policy.handleFailedColumnCheck( columnValue.toString(), String.format(
+                                "Values should be consecutive, expected %s found %s", nextExpectedValue, columnValue ) );
                     }
                     nextExpectedValue = sum( nextExpectedValue, incrementBy );
                 }
-                return ColumnResult.pass( value );
             }
             catch ( NumberFormatException e )
             {
-                return ColumnResult.fail( String.format( "Invalid number format [%s]", columnString ) );
+                policy.handleFailedColumnCheck( columnValue.toString(),
+                        String.format( "Invalid number format [%s]", columnValue ) );
             }
         }
     }
@@ -162,9 +167,16 @@ public abstract class Column<T>
     public static class IntegerColumn extends NumberColumn<Integer>
     {
         @Override
-        protected Integer parse( String columnString ) throws NumberFormatException
+        public Integer parse( String columnString ) throws ColumnParseException
         {
-            return Integer.parseInt( columnString );
+            try
+            {
+                return Integer.parseInt( columnString );
+            }
+            catch ( NumberFormatException e )
+            {
+                throw new ColumnParseException( e.getCause() );
+            }
         }
 
         @Override
@@ -190,9 +202,16 @@ public abstract class Column<T>
     {
 
         @Override
-        protected Long parse( String columnString ) throws NumberFormatException
+        public Long parse( String columnString ) throws ColumnParseException
         {
-            return Long.parseLong( columnString );
+            try
+            {
+                return Long.parseLong( columnString );
+            }
+            catch ( NumberFormatException e )
+            {
+                throw new ColumnParseException( e.getCause() );
+            }
         }
 
         @Override
@@ -240,23 +259,26 @@ public abstract class Column<T>
         }
 
         @Override
-        public ColumnResult<String> doCheck( String columnString )
+        public String parse( String columnString )
+        {
+            return columnString;
+        }
+
+        @Override
+        protected void doCheck( FailedColumnCheckPolicy policy, String columnValue ) throws ColumnCheckException
         {
             if ( null == regex )
             {
-                return ColumnResult.pass( columnString );
+                return;
             }
             if ( false == keepAccents )
             {
-                columnString = removeAccents( columnString );
+                columnValue = removeAccents( columnValue );
             }
-            if ( regex.matcher( columnString ).matches() )
+            if ( false == regex.matcher( columnValue ).matches() )
             {
-                return ColumnResult.pass( columnString );
-            }
-            else
-            {
-                return ColumnResult.fail( String.format( "Invalid string pattern, expected: %s", regex.toString() ) );
+                policy.handleFailedColumnCheck( columnValue,
+                        String.format( "Invalid string pattern, expected: %s", regex.toString() ) );
             }
         }
     }
@@ -268,20 +290,23 @@ public abstract class Column<T>
         private final Pattern regex = Pattern.compile( "^\\w+([\\.\\-]\\w+)*@\\w+([\\.\\-]\\w+)*\\.\\w{2,4}$" );
 
         @Override
-        public ColumnResult<String> doCheck( String columnString )
+        public String parse( String columnString )
         {
-            if ( regex.matcher( columnString ).matches() )
+            return columnString;
+        }
+
+        @Override
+        protected void doCheck( FailedColumnCheckPolicy policy, String columnValue ) throws ColumnCheckException
+        {
+            if ( false == regex.matcher( columnValue ).matches() )
             {
-                return ColumnResult.pass( columnString );
-            }
-            else
-            {
-                return ColumnResult.fail( String.format( "Invalid email address pattern, expected: %s",
-                        regex.toString() ) );
+                policy.handleFailedColumnCheck( columnValue,
+                        String.format( "Invalid email address pattern, expected: %s", regex.toString() ) );
             }
         }
     }
 
+    // TODO change to withFiniteSet/isFiniteSet rather than a separate column
     public static class FiniteSetColumn extends Column<String>
     {
         private Pattern regex = null;
@@ -292,15 +317,18 @@ public abstract class Column<T>
         }
 
         @Override
-        public ColumnResult<String> doCheck( String columnString )
+        public String parse( String columnString )
         {
-            if ( regex.matcher( columnString ).matches() )
+            return columnString;
+        }
+
+        @Override
+        protected void doCheck( FailedColumnCheckPolicy policy, String columnValue ) throws ColumnCheckException
+        {
+            if ( false == regex.matcher( columnValue ).matches() )
             {
-                return ColumnResult.pass( columnString );
-            }
-            else
-            {
-                return ColumnResult.fail( String.format( "Invalid string pattern, expected: %s", regex.toString() ) );
+                policy.handleFailedColumnCheck( columnValue,
+                        String.format( "Invalid string pattern, expected: %s", regex.toString() ) );
             }
         }
     }
@@ -331,16 +359,22 @@ public abstract class Column<T>
         }
 
         @Override
-        public ColumnResult<Date> doCheck( String columnString )
+        protected void doCheck( FailedColumnCheckPolicy policy, Date columnValue ) throws ColumnCheckException
+        {
+            // TODO withRange, etc.
+        }
+
+        @Override
+        public Date parse( String columnString ) throws ColumnParseException
         {
             try
             {
-                Date value = dateFormat.parse( columnString );
-                return ColumnResult.pass( value );
+                return dateFormat.parse( columnString );
             }
             catch ( ParseException e )
             {
-                return ColumnResult.fail( String.format( "%s has invalid date format\n%s", columnString, e.getMessage() ) );
+                throw new ColumnParseException( String.format( "%s has invalid date format", columnString ),
+                        e.getCause() );
             }
         }
     }
@@ -415,7 +449,13 @@ public abstract class Column<T>
         }
 
         @Override
-        public ColumnResult<String> doCheck( String columnString )
+        public String parse( String columnString )
+        {
+            return columnString;
+        }
+
+        @Override
+        protected void doCheck( FailedColumnCheckPolicy policy, String columnValue ) throws ColumnCheckException
         {
             // if ( null != encoding )
             // {
@@ -433,16 +473,11 @@ public abstract class Column<T>
 
             if ( false == keepAccents )
             {
-                columnString = removeAccents( columnString );
+                columnValue = removeAccents( columnValue );
             }
-
-            if ( urlValidator.isValid( columnString ) )
+            if ( false == urlValidator.isValid( columnValue ) )
             {
-                return ColumnResult.pass( columnString );
-            }
-            else
-            {
-                return ColumnResult.fail( String.format( "Invalid URL: %s", columnString ) );
+                policy.handleFailedColumnCheck( columnValue, String.format( "Invalid URL: %s", columnValue ) );
             }
         }
     }

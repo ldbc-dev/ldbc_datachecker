@@ -6,8 +6,9 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.ldbc.datachecker.CheckResult;
 import com.ldbc.datachecker.DirectoryCheck;
+import com.ldbc.datachecker.DirectoryCheckException;
+import com.ldbc.datachecker.FailedCheckPolicy.FailedDirectoryCheckPolicy;
 
 public class DirectoryContainsAllAndOnlyExpectedCsvFiles implements DirectoryCheck
 {
@@ -19,7 +20,7 @@ public class DirectoryContainsAllAndOnlyExpectedCsvFiles implements DirectoryChe
     }
 
     @Override
-    public CheckResult checkDirectory( File directory )
+    public void checkDirectory( FailedDirectoryCheckPolicy policy, File directory ) throws DirectoryCheckException
     {
         FilenameFilter filenameFilter = new FilenameFilter()
         {
@@ -37,7 +38,7 @@ public class DirectoryContainsAllAndOnlyExpectedCsvFiles implements DirectoryChe
 
         if ( expectedCsvFiles.equals( foundCsvFiles ) )
         {
-            return CheckResult.pass();
+            return;
         }
 
         Set<String> expectedAndFound = new HashSet<String>();
@@ -57,6 +58,6 @@ public class DirectoryContainsAllAndOnlyExpectedCsvFiles implements DirectoryChe
         errMsg.append( String.format( "CSV files found but not expected: %s\n", foundButNotExpected.toString() ) );
         errMsg.append( String.format( "CSV files expected but not found: %s", expectedButNotFound.toString() ) );
 
-        return CheckResult.fail( errMsg.toString() );
+        policy.handleFailedDirectoryCheck( this, directory, errMsg.toString() );
     }
 }

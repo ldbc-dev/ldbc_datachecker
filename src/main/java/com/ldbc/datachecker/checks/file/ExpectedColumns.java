@@ -3,9 +3,11 @@ package com.ldbc.datachecker.checks.file;
 import java.io.File;
 
 import com.ldbc.datachecker.Column;
-import com.ldbc.datachecker.ColumnResult;
+import com.ldbc.datachecker.ColumnCheckException;
 import com.ldbc.datachecker.FileCheck;
-import com.ldbc.datachecker.CheckResult;
+import com.ldbc.datachecker.FailedCheckPolicy.FailedColumnCheckPolicy;
+import com.ldbc.datachecker.FailedCheckPolicy.FailedFileCheckPolicy;
+import com.ldbc.datachecker.FileCheckException;
 
 public class ExpectedColumns implements FileCheck
 {
@@ -38,28 +40,23 @@ public class ExpectedColumns implements FileCheck
     }
 
     @Override
-    public CheckResult checkLine( String[] stringColumns )
+    public void checkLine( FailedFileCheckPolicy filePolicy, FailedColumnCheckPolicy columnPolicy, long lineNumber,
+            String[] stringColumns ) throws FileCheckException, ColumnCheckException
     {
-        if ( this.columns.length != stringColumns.length )
+        if ( columns.length != stringColumns.length )
         {
-            return CheckResult.fail( String.format( "Expected %s columns but found %s", this.columns.length,
-                    stringColumns.length ) );
+            filePolicy.handleFailedLineCheck( this,
+                    String.format( "Expected %s columns but found %s", columns.length, stringColumns.length ),
+                    lineNumber, stringColumns );
         }
-        for ( int i = 0; i < this.columns.length; i++ )
+        for ( int i = 0; i < columns.length; i++ )
         {
-            ColumnResult<?> result = this.columns[i].check( stringColumns[i] );
-            if ( false == result.isSuccess() )
-            {
-                return CheckResult.fail( String.format( "Column[%s] - %s - %s\n%s", i,
-                        columns[i].getClass().getSimpleName(), stringColumns[i], result.getMessage() ) );
-            }
+            columns[i].check( columnPolicy, stringColumns[i] );
         }
-        return CheckResult.pass();
     }
 
     @Override
-    public CheckResult checkFile()
+    public void checkFile( FailedFileCheckPolicy filePolicy )
     {
-        return CheckResult.pass();
     }
 }

@@ -13,22 +13,33 @@ import java.util.Properties;
 import org.apache.log4j.Logger;
 
 import com.ldbc.datachecker.Check;
-import com.ldbc.datachecker.CheckException;
+import com.ldbc.datachecker.ColumnCheckException;
 import com.ldbc.datachecker.CheckRunner;
 import com.ldbc.datachecker.ColumnRef;
 import com.ldbc.datachecker.DirectoryCheck;
+import com.ldbc.datachecker.DirectoryCheckException;
 import com.ldbc.datachecker.FailedCheckPolicy;
 import com.ldbc.datachecker.FileCheck;
+import com.ldbc.datachecker.FileCheckException;
 import com.ldbc.datachecker.checks.directory.DirectoryContainsAllAndOnlyExpectedCsvFiles;
 import com.ldbc.datachecker.checks.file.ExpectedColumns;
 import com.ldbc.datachecker.checks.file.ExpectedLength;
+import com.ldbc.datachecker.failure.LoggingFailedCheckPolicy;
 import com.ldbc.datachecker.failure.TerminateFailedCheckPolicy;
+
+/* 
+ * TODO FailedCheckPolicy should be pushed down to Column checks too
+ *  - could output line for each CHECK of a Column
+ *  - would not interfere with other checks of Column if one fails
+ *  - could still return result if possible
+ */
 
 public class SocialNetCheck implements Check
 {
     private static final Logger logger = Logger.getLogger( SocialNetCheck.class );
 
-    public static void main( String[] args ) throws FileNotFoundException, IOException, CheckException
+    public static void main( String[] args ) throws FileNotFoundException, IOException, ColumnCheckException,
+            FileCheckException, DirectoryCheckException
     {
         logger.info( "LDBC Social Network Data Checker" );
 
@@ -41,10 +52,13 @@ public class SocialNetCheck implements Check
         long personCount = Long.parseLong( (String) dataGenProperties.get( "numtotalUser" ) );
         logger.info( String.format( "Expected Person Count = %s", personCount ) );
 
+        boolean terminateOnError = Boolean.parseBoolean( args[1] );
+        FailedCheckPolicy policy = ( terminateOnError ) ? new TerminateFailedCheckPolicy()
+                : new LoggingFailedCheckPolicy( logger );
+
         // TODO 1
         long idsShouldIncrementBy = 10;
 
-        FailedCheckPolicy policy = new TerminateFailedCheckPolicy();
         Check socialNetCheck = new SocialNetCheck( dataDirectory, idsShouldIncrementBy, personCount );
         CheckRunner checkRunner = new CheckRunner( dataDirectory, socialNetCheck, policy );
         checkRunner.check();
@@ -147,7 +161,8 @@ public class SocialNetCheck implements Check
         // id|name|url
         // TODO url = isUrl()
         // TODO id = isLong().withConsecutive( 0l, idsShouldIncrementBy )
-        fileChecks.add( new ExpectedColumns( inDir( "tag.csv" ), isLong().saveRefTo( tagsRef ), isString(), isString() ) );
+        fileChecks.add( new ExpectedColumns( inDir( "tag.csv" ),
+                isLong().withConsecutive( 0l, idsShouldIncrementBy ).saveRefTo( tagsRef ), isString(), isString() ) );
 
         /*
         * Relationships

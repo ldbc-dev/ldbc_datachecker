@@ -2,7 +2,9 @@ package com.ldbc.datachecker;
 
 import java.io.File;
 
+import com.ldbc.datachecker.FailedCheckPolicy.FailedDirectoryCheckPolicy;
+
 public interface DirectoryCheck
 {
-    public CheckResult checkDirectory( File directory );
+    public void checkDirectory( FailedDirectoryCheckPolicy policy, File directory ) throws DirectoryCheckException;
 }

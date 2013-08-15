@@ -1,25 +1,25 @@
 package com.ldbc.datachecker;
 
-public class CheckException extends Exception
+public class FileCheckException extends Exception
 {
     private static final long serialVersionUID = 2059817646120179168L;
 
-    public CheckException()
+    public FileCheckException()
     {
         super();
     }
 
-    public CheckException( String message, Throwable cause )
+    public FileCheckException( String message, Throwable cause )
     {
         super( message, cause );
     }
 
-    public CheckException( String message )
+    public FileCheckException( String message )
     {
         super( message );
     }
 
-    public CheckException( Throwable cause )
+    public FileCheckException( Throwable cause )
     {
         super( cause );
     }

@@ -3,7 +3,9 @@ package com.ldbc.datachecker.checks.file;
 import java.io.File;
 
 import com.ldbc.datachecker.FileCheck;
-import com.ldbc.datachecker.CheckResult;
+import com.ldbc.datachecker.FailedCheckPolicy.FailedColumnCheckPolicy;
+import com.ldbc.datachecker.FailedCheckPolicy.FailedFileCheckPolicy;
+import com.ldbc.datachecker.FileCheckException;
 
 public class ExpectedLength implements FileCheck
 {
@@ -38,16 +40,19 @@ public class ExpectedLength implements FileCheck
     }
 
     @Override
-    public CheckResult checkLine( String[] columns )
+    public void checkLine( FailedFileCheckPolicy filePolicy, FailedColumnCheckPolicy columnPolicy, long lineNumber,
+            String[] stringColumns )
     {
         lineCount++;
-        return CheckResult.pass();
     }
 
     @Override
-    public CheckResult checkFile()
+    public void checkFile( FailedFileCheckPolicy filePolicy ) throws FileCheckException
     {
-        return ( lineCount == expectedLineCount ) ? CheckResult.pass() : CheckResult.fail( String.format(
-                "File expected to have %s lines, found %s", expectedLineCount, lineCount ) );
+        if ( false == ( lineCount == expectedLineCount ) )
+        {
+            filePolicy.handleFailedFileCheck( this,
+                    String.format( "File expected to have %s lines, found %s", expectedLineCount, lineCount ) );
+        }
     }
 }

@@ -4,6 +4,9 @@ import java.io.FileNotFoundException;
 
 import org.apache.log4j.Logger;
 
+import com.ldbc.datachecker.FailedCheckPolicy.FailedColumnCheckPolicy;
+import com.ldbc.datachecker.FailedCheckPolicy.FailedFileCheckPolicy;
+
 public class FileCheckRunner
 {
     private static final Logger logger = Logger.getLogger( FileCheckRunner.class );
@@ -15,10 +18,12 @@ public class FileCheckRunner
         this.policy = policy;
     }
 
-    public void checkFile( FileCheck fileCheck ) throws CheckException
+    public void checkFile( FileCheck fileCheck ) throws ColumnCheckException, FileCheckException
     {
         logger.info( String.format( "Checking[%s] - %s", fileCheck.getClass().getSimpleName(),
                 fileCheck.forFile().getName() ) );
+
+        FailedFileCheckPolicy filePolicy = policy.getFailedFileCheckPolicy();
 
         CsvFileReader reader;
         try
@@ -28,30 +33,23 @@ public class FileCheckRunner
         catch ( FileNotFoundException e )
         {
             String errMsg = String.format( "File not found [%s]\n", fileCheck.forFile().getAbsolutePath() );
-            throw new CheckException( errMsg );
+            throw new ColumnCheckException( errMsg );
         }
 
         // Check lines of file
         long lineNumber = 0;
         while ( reader.hasNext() )
         {
-            String[] line = reader.next();
+            String[] row = reader.next();
+            FailedColumnCheckPolicy columnPolicy = policy.getFailedColumnCheckPolicy( fileCheck, lineNumber, row );
             if ( lineNumber >= fileCheck.startLine() )
             {
-                CheckResult lineResult = fileCheck.checkLine( line );
-                if ( false == lineResult.isSuccess() )
-                {
-                    policy.handleFailedLineCheck( fileCheck, lineResult, lineNumber, line );
-                }
+                fileCheck.checkLine( filePolicy, columnPolicy, lineNumber, row );
             }
             lineNumber++;
         }
 
         // Check file
-        CheckResult fileResult = fileCheck.checkFile();
-        if ( false == fileResult.isSuccess() )
-        {
-            policy.handleFailedFileCheck( fileCheck, fileResult );
-        }
+        fileCheck.checkFile( filePolicy );
     }
 }
