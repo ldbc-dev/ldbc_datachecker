@@ -27,13 +27,6 @@ import com.ldbc.datachecker.checks.file.ExpectedLength;
 import com.ldbc.datachecker.failure.LoggingFailedCheckPolicy;
 import com.ldbc.datachecker.failure.TerminateFailedCheckPolicy;
 
-/* 
- * TODO FailedCheckPolicy should be pushed down to Column checks too
- *  - could output line for each CHECK of a Column
- *  - would not interfere with other checks of Column if one fails
- *  - could still return result if possible
- */
-
 public class SocialNetCheck implements Check
 {
     private static final Logger logger = Logger.getLogger( SocialNetCheck.class );
@@ -43,18 +36,47 @@ public class SocialNetCheck implements Check
     {
         logger.info( "LDBC Social Network Data Checker" );
 
-        // "/home/alex/workspace/java/ldbc_socialnet_bm/ldbc_socialnet_dbgen/"
+        /*
+         * ldbc_socialnet_bm_dbgen directory, e.g.:
+         * "/home/alex/workspace/java/ldbc_socialnet_bm/ldbc_socialnet_dbgen/"
+         */
         File dataGenDirectory = new File( args[0] );
         File dataDirectory = new File( dataGenDirectory, "outputDir/" );
         Properties dataGenProperties = new Properties();
         dataGenProperties.load( new FileInputStream( new File( dataGenDirectory, "params.ini" ) ) );
-
         long personCount = Long.parseLong( (String) dataGenProperties.get( "numtotalUser" ) );
         logger.info( String.format( "Expected Person Count = %s", personCount ) );
 
+        /*
+         * terminate on error
+         */
         boolean terminateOnError = Boolean.parseBoolean( args[1] );
-        FailedCheckPolicy policy = ( terminateOnError ) ? new TerminateFailedCheckPolicy()
-                : new LoggingFailedCheckPolicy( logger );
+
+        /*
+         * log to file (as well as console)
+         */
+        boolean logToFile = Boolean.parseBoolean( args[2] );
+
+        FailedCheckPolicy policy = null;
+        if ( true == terminateOnError )
+        {
+            policy = new TerminateFailedCheckPolicy();
+        }
+        else
+        {
+            Logger fileLogger = null;
+            if ( true == logToFile )
+            {
+                System.out.println( "here" );
+                fileLogger = Logger.getLogger( "file" );
+                // RollingFileAppender appender = ( (RollingFileAppender)
+                // fileLogger.getAppender( "file" ) );
+                // appender.setFile( logFile );
+                // appender.activateOptions();
+            }
+            policy = LoggingFailedCheckPolicy.toConsoleAndFile( logger, fileLogger );
+
+        }
 
         // TODO 1
         long idsShouldIncrementBy = 10;
@@ -161,8 +183,7 @@ public class SocialNetCheck implements Check
         // id|name|url
         // TODO url = isUrl()
         // TODO id = isLong().withConsecutive( 0l, idsShouldIncrementBy )
-        fileChecks.add( new ExpectedColumns( inDir( "tag.csv" ),
-                isLong().withConsecutive( 0l, idsShouldIncrementBy ).saveRefTo( tagsRef ), isString(), isString() ) );
+        fileChecks.add( new ExpectedColumns( inDir( "tag.csv" ), isLong().saveRefTo( tagsRef ), isString(), isString() ) );
 
         /*
         * Relationships
