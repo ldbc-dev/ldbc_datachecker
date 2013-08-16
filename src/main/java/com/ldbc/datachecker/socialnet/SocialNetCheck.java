@@ -67,7 +67,6 @@ public class SocialNetCheck implements Check
             Logger fileLogger = null;
             if ( true == logToFile )
             {
-                System.out.println( "here" );
                 fileLogger = Logger.getLogger( "file" );
                 // RollingFileAppender appender = ( (RollingFileAppender)
                 // fileLogger.getAppender( "file" ) );
