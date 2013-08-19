@@ -4,23 +4,30 @@ import static com.ldbc.datachecker.Column.*;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
+import org.apache.commons.cli.BasicParser;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
 
 import com.ldbc.datachecker.Check;
-import com.ldbc.datachecker.ColumnCheckException;
 import com.ldbc.datachecker.CheckRunner;
 import com.ldbc.datachecker.ColumnRef;
 import com.ldbc.datachecker.DirectoryCheck;
-import com.ldbc.datachecker.DirectoryCheckException;
 import com.ldbc.datachecker.FailedCheckPolicy;
 import com.ldbc.datachecker.FileCheck;
-import com.ldbc.datachecker.FileCheckException;
 import com.ldbc.datachecker.checks.directory.DirectoryContainsAllAndOnlyExpectedCsvFiles;
 import com.ldbc.datachecker.checks.file.ExpectedColumns;
 import com.ldbc.datachecker.checks.file.ExpectedLength;
@@ -31,31 +38,65 @@ public class SocialNetCheck implements Check
 {
     private static final Logger logger = Logger.getLogger( SocialNetCheck.class );
 
-    public static void main( String[] args ) throws FileNotFoundException, IOException, ColumnCheckException,
-            FileCheckException, DirectoryCheckException
+    private static final String DIR = "dir";
+    private static final String TERMINATE = "terminate";
+    private static final String LOG = "log";
+
+    public static void main( String[] args )
     {
+        Map<String, String> params = null;
+        Options options = buildOptions();
+        try
+        {
+            params = parseArgs( args, options );
+        }
+        catch ( ParseException e )
+        {
+            logger.error( e.getMessage() );
+            System.out.println();
+
+            int printedRowWidth = 110;
+            String header = "";
+            String footer = "";
+            int spacesBeforeOption = 3;
+            int spacesBeforeOptionDescription = 5;
+            boolean displayUsage = true;
+            printHelp( options, printedRowWidth, header, footer, spacesBeforeOption, spacesBeforeOptionDescription,
+                    displayUsage, System.out );
+            System.out.println();
+            return;
+        }
+
         logger.info( "LDBC Social Network Data Checker" );
 
         /*
          * ldbc_socialnet_bm_dbgen directory, e.g.:
          * "/home/alex/workspace/java/ldbc_socialnet_bm/ldbc_socialnet_dbgen/"
          */
-        File dataGenDirectory = new File( args[0] );
+        File dataGenDirectory = new File( params.get( DIR ) );
         File dataDirectory = new File( dataGenDirectory, "outputDir/" );
         Properties dataGenProperties = new Properties();
-        dataGenProperties.load( new FileInputStream( new File( dataGenDirectory, "params.ini" ) ) );
+        try
+        {
+            dataGenProperties.load( new FileInputStream( new File( dataGenDirectory, "params.ini" ) ) );
+        }
+        catch ( Exception e )
+        {
+            logger.error( e.getMessage() );
+            return;
+        }
         long personCount = Long.parseLong( (String) dataGenProperties.get( "numtotalUser" ) );
         logger.info( String.format( "Expected Person Count = %s", personCount ) );
 
         /*
          * terminate on error
          */
-        boolean terminateOnError = Boolean.parseBoolean( args[1] );
+        boolean terminateOnError = Boolean.parseBoolean( params.get( TERMINATE ) );
 
         /*
          * log to file (as well as console)
          */
-        boolean logToFile = Boolean.parseBoolean( args[2] );
+        boolean logToFile = Boolean.parseBoolean( params.get( LOG ) );
 
         FailedCheckPolicy policy = null;
         if ( true == terminateOnError )
@@ -80,11 +121,72 @@ public class SocialNetCheck implements Check
         // TODO 1
         long idsShouldIncrementBy = 10;
 
-        Check socialNetCheck = new SocialNetCheck( dataDirectory, idsShouldIncrementBy, personCount );
-        CheckRunner checkRunner = new CheckRunner( dataDirectory, socialNetCheck, policy );
-        checkRunner.check();
+        try
+        {
+            Check socialNetCheck = new SocialNetCheck( dataDirectory, idsShouldIncrementBy, personCount );
+            CheckRunner checkRunner = new CheckRunner( dataDirectory, socialNetCheck, policy );
+            checkRunner.check();
+        }
+        catch ( Exception e )
+        {
+            logger.error( e.getMessage() );
+            return;
+        }
 
         logger.info( "Check complete" );
+    }
+
+    private static Options buildOptions()
+    {
+        Option dataDirOption = OptionBuilder.isRequired().hasArg().withLongOpt( "dir" ).withDescription(
+                "ldbc_socialnet_dbgen directory path" ).create( "d" );
+        Option terminateOption = OptionBuilder.withLongOpt( "terminate" ).withDescription( "Terminate on error" ).create(
+                "t" );
+        Option logToFileOption = OptionBuilder.withLongOpt( "log" ).withDescription( "Log errors to csv file" ).create(
+                "l" );
+
+        Options options = new Options();
+        options.addOption( dataDirOption );
+        options.addOption( terminateOption );
+        options.addOption( logToFileOption );
+
+        return options;
+    }
+
+    private static Map<String, String> parseArgs( String[] args, Options options ) throws ParseException
+    {
+        Map<String, String> params = new HashMap<String, String>();
+
+        CommandLineParser parser = new BasicParser();
+
+        CommandLine cmd = parser.parse( options, args );
+
+        params.put( DIR, cmd.getOptionValue( 'd' ) );
+        params.put( TERMINATE, Boolean.toString( cmd.hasOption( 't' ) ) );
+        params.put( LOG, Boolean.toString( cmd.hasOption( 'l' ) ) );
+
+        return params;
+    }
+
+    public static void printUsage( final String applicationName, int printedRowWidth, final Options options,
+            final OutputStream out )
+    {
+        final PrintWriter writer = new PrintWriter( System.out );
+        final HelpFormatter usageFormatter = new HelpFormatter();
+        usageFormatter.printUsage( writer, printedRowWidth, applicationName, options );
+        writer.flush();
+    }
+
+    public static void printHelp( final Options options, final int printedRowWidth, final String header,
+            final String footer, final int spacesBeforeOption, final int spacesBeforeOptionDescription,
+            final boolean displayUsage, final OutputStream out )
+    {
+        final String commandLineSyntax = "java -cp datachecker-0.1-SNAPSHOT.jar " + SocialNetCheck.class.getName();
+        final PrintWriter writer = new PrintWriter( out );
+        final HelpFormatter helpFormatter = new HelpFormatter();
+        helpFormatter.printHelp( writer, printedRowWidth, commandLineSyntax, header, options, spacesBeforeOption,
+                spacesBeforeOptionDescription, footer, displayUsage );
+        writer.flush();
     }
 
     private final File dataDirectory;
