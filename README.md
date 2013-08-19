@@ -7,11 +7,10 @@ LDBC Data Checker
 
 **Run**
 
-	usage: java -cp datachecker-0.1-SNAPSHOT.jar com.ldbc.datachecker.socialnet.SocialNetCheck -d [-l] [-t]
-	   -d,--dir           ldbc_socialnet_dbgen directory path
-	   -l,--log           Log errors to csv file
-	   -t,--terminate     Terminate on err
-	    java -cp target/datachecker-0.1-SNAPSHOT.jar com.ldbc.datachecker.socialnet.SocialNetCheck DBGEN_DIR TERMINATE LOG_TO_CSV
+    usage: java -cp datachecker-0.1-SNAPSHOT.jar com.ldbc.datachecker.socialnet.SocialNetCheck -d [-l] [-t]
+        -d,--dir           ldbc_socialnet_dbgen directory path
+        -l,--log           Log errors to csv file
+        -t,--terminate     Terminate on err
 
 Where:
 
