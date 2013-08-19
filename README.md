@@ -19,7 +19,7 @@ Where:
  * `-t`: specifies how `datachecker` should behave when an invalid data is encountered
     * `true` --> throw an exception with descriptive error message
     * `false` --> log a descriptive error message
- * `-l`: (only used if `t == false`) specifies if errors should be written to `validation_errors.csv`
+ * `-l`: (only used if `-t` is `false`) specifies if errors should be written to `validation_errors.csv`
     * `true` --> `datachecker` logs errors to, both, console and `validation_errors.csv`
     * `false` --> `datachecker` logs errors to console only
 
