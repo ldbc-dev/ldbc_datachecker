@@ -138,7 +138,7 @@ public class SocialNetCheck implements Check
 
     private static Options buildOptions()
     {
-        Option dataDirOption = OptionBuilder.isRequired().hasArg().withLongOpt( "dir" ).withDescription(
+        Option dataDirOption = OptionBuilder.isRequired().hasArg().withArgName( "path" ).withLongOpt( "dir" ).withDescription(
                 "ldbc_socialnet_dbgen directory path" ).create( "d" );
         Option terminateOption = OptionBuilder.withLongOpt( "terminate" ).withDescription( "Terminate on error" ).create(
                 "t" );

@@ -7,10 +7,10 @@ LDBC Data Checker
 
 **Run**
 
-    java -cp datachecker-0.1-SNAPSHOT.jar com.ldbc.datachecker.socialnet.SocialNetCheck -d [-l] [-t]
-        -d,--dir           ldbc_socialnet_dbgen directory path
-        -l,--log           Log errors to csv file
-        -t,--terminate     Terminate on error
+    java -cp datachecker-0.1-SNAPSHOT.jar com.ldbc.datachecker.socialnet.SocialNetCheck -d <path> [-l] [-t]
+        -d,--dir <path>     ldbc_socialnet_dbgen directory path
+        -l,--log            Log errors to csv file
+        -t,--terminate      Terminate on error
 
 Where:
 
@@ -19,7 +19,7 @@ Where:
  * `-t`: specifies how `datachecker` should behave when an invalid data is encountered
     * `true` --> throw an exception with descriptive error message
     * `false` --> log a descriptive error message
- * `-l`: (only used if `l == false`) specifies if errors should be written to `validation_errors.csv`
+ * `-l`: (only used if `t == false`) specifies if errors should be written to `validation_errors.csv`
     * `true` --> `datachecker` logs errors to, both, console and `validation_errors.csv`
     * `false` --> `datachecker` logs errors to console only
 
