@@ -10,7 +10,7 @@ LDBC Data Checker
     java -cp datachecker-0.1-SNAPSHOT.jar com.ldbc.datachecker.socialnet.SocialNetCheck -d [-l] [-t]
         -d,--dir           ldbc_socialnet_dbgen directory path
         -l,--log           Log errors to csv file
-        -t,--terminate     Terminate on err
+        -t,--terminate     Terminate on error
 
 Where:
 
