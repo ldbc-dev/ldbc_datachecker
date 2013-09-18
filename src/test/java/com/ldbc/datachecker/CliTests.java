@@ -3,6 +3,7 @@ package com.ldbc.datachecker;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.Arrays;
+import java.util.HashSet;
 
 import org.apache.commons.cli.AlreadySelectedException;
 import org.apache.commons.cli.BasicParser;
@@ -13,6 +14,7 @@ import org.apache.commons.cli.MissingArgumentException;
 import org.apache.commons.cli.MissingOptionException;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.OptionGroup;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.UnrecognizedOptionException;
@@ -23,6 +25,89 @@ import static org.hamcrest.CoreMatchers.*;
 
 public class CliTests
 {
+    @Test
+    public void shouldSupportOptionsWithMultipleValueAssignments() throws ParseException
+    {
+        Options options = new Options();
+
+        Option valueOption = OptionBuilder.hasArgs( 1 ).withArgName( "value" ).create( "x" );
+        options.addOption( valueOption );
+
+        String[] args = { "-x", "1", "-x", "2" };
+
+        CommandLineParser parser = new BasicParser();
+        CommandLine cmd = parser.parse( options, args );
+
+        assertThat( cmd.getOptionProperties( "x" ).size(), is( 2 ) );
+        assertThat( cmd.getOptionProperties( "x" ).containsKey( "1" ), is( true ) );
+        assertThat( cmd.getOptionProperties( "x" ).containsKey( "2" ), is( true ) );
+    }
+
+    @Test
+    public void shouldSupportKeyValueOptionsWithMultipleValueAssignments() throws ParseException
+    {
+        Options options = new Options();
+
+        Option propertyOption = OptionBuilder.hasArgs( 2 ).withValueSeparator( '=' ).withArgName( "key=value" ).withDescription(
+                "key value" ).create( "p" );
+        options.addOption( propertyOption );
+
+        String[] args = { "-p", "a=1", "-p", "b=3" };
+
+        CommandLineParser parser = new BasicParser();
+        CommandLine cmd = parser.parse( options, args );
+
+        assertThat( Integer.parseInt( (String) cmd.getOptionProperties( "p" ).get( "a" ) ), is( 1 ) );
+        assertThat( Integer.parseInt( (String) cmd.getOptionProperties( "p" ).get( "b" ) ), is( 3 ) );
+    }
+
+    @Test
+    public void shouldSupportMultiValuedOptions() throws ParseException
+    {
+        Options options = new Options();
+
+        Option propertyOption = OptionBuilder.hasArgs().withValueSeparator( ':' ).withArgName( "item1:item2" ).withDescription(
+                "list of things" ).create( "l" );
+        options.addOption( propertyOption );
+
+        String[] args = { "-l", "a:b:c:d", "-l", "e:f" };
+
+        CommandLineParser parser = new BasicParser();
+        CommandLine cmd = parser.parse( options, args );
+
+        assertThat( cmd.getOptionValues( "l" ), is( new String[] { "a", "b", "c", "d", "e", "f" } ) );
+    }
+
+    @Test
+    public void optionGroupShouldBeExclusive() throws ParseException
+    {
+        Options options = new Options();
+
+        Option a = OptionBuilder.create( "a" );
+        Option b = OptionBuilder.create( "b" );
+
+        OptionGroup group = new OptionGroup();
+        group.addOption( a );
+        group.addOption( b );
+
+        options.addOptionGroup( group );
+
+        String[] args = { "-a", "-b" };
+
+        boolean exceptionThrown = false;
+        CommandLineParser parser = new BasicParser();
+        try
+        {
+            parser.parse( options, args );
+        }
+        catch ( AlreadySelectedException e )
+        {
+            exceptionThrown = true;
+        }
+
+        assertThat( exceptionThrown, is( true ) );
+    }
+
     @Test
     public void shouldOnlyPassIfRequiredOptionGiven() throws ParseException
     {

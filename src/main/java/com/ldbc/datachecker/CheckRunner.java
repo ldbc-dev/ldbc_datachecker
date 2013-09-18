@@ -21,7 +21,7 @@ public class CheckRunner
         this.policy = policy;
         if ( false == directory.isDirectory() )
         {
-            throw new ColumnCheckException( "Must be a directory" );
+            throw new ColumnCheckException( "Must be a directory: " + directory.getAbsolutePath() );
         }
     }
 
