@@ -13,14 +13,14 @@ public class ExpectedColumns implements FileCheck
 {
     private final int startLine;
     private final File forFile;
-    private final Column<?>[] columns;
+    private final Column[] columns;
 
-    public ExpectedColumns( String filename, Column<?>... columns )
+    public ExpectedColumns( String filename, Column... columns )
     {
         this( filename, 1, columns );
     }
 
-    public ExpectedColumns( String filename, int startLine, Column<?>... columns )
+    public ExpectedColumns( String filename, int startLine, Column... columns )
     {
         this.forFile = new File( filename );
         this.startLine = startLine;

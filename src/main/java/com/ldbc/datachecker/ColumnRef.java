@@ -1,6 +1,12 @@
 package com.ldbc.datachecker;
 
+import java.util.Collections;
+import java.util.Comparator;
+
+import gnu.trove.list.TLongList;
+import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.set.TLongSet;
+import gnu.trove.set.hash.THashSet;
 import gnu.trove.set.hash.TLongHashSet;
 
 public abstract class ColumnRef<T>
@@ -17,28 +23,13 @@ public abstract class ColumnRef<T>
         return name;
     }
 
-    public abstract void add( T columnValue );
+    /**
+     * @param columnValue
+     * @return false if columnValue already existed, otherwise true
+     */
+    public abstract boolean add( T columnValue );
 
     public abstract boolean contains( T columnValue );
-
-    public static class NothingColumnRef<T1> extends ColumnRef<T1>
-    {
-        public NothingColumnRef( String name )
-        {
-            super( name );
-        }
-
-        @Override
-        public void add( T1 columnValue )
-        {
-        }
-
-        @Override
-        public boolean contains( T1 columnValue )
-        {
-            return true;
-        }
-    }
 
     public static class LongColumnRef extends ColumnRef<Long>
     {
@@ -50,9 +41,9 @@ public abstract class ColumnRef<T>
         }
 
         @Override
-        public void add( Long value )
+        public boolean add( Long value )
         {
-            set.add( value );
+            return set.add( value );
         }
 
         @Override
@@ -60,6 +51,40 @@ public abstract class ColumnRef<T>
         {
             return set.contains( value );
         }
+    }
 
+    public static class MultiLongColumnRef extends ColumnRef<Long>
+    {
+        private final THashSet<TLongList> set = new THashSet<TLongList>();
+        private final int bufferSize;
+        private final boolean doSort;
+        private TLongList buffer = new TLongArrayList();
+
+        public MultiLongColumnRef( String name, int bufferSize, boolean doSort )
+        {
+            super( name );
+            this.bufferSize = bufferSize;
+            this.doSort = doSort;
+        }
+
+        @Override
+        public boolean add( Long value )
+        {
+            buffer.add( value );
+            if ( buffer.size() == bufferSize )
+            {
+                TLongList entry = buffer;
+                if ( doSort ) entry.sort();
+                buffer = new TLongArrayList();
+                return set.add( entry );
+            }
+            return true;
+        }
+
+        @Override
+        public boolean contains( Long value )
+        {
+            return set.contains( value );
+        }
     }
 }

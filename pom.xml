@@ -16,10 +16,16 @@
 		<trove4j-version>3.0.3</trove4j-version>
 		<commmons-validator-version>1.4.0</commmons-validator-version>
 		<commmons-cli-version>1.2</commmons-cli-version>
+		<guava-version>15.0</guava-version>
 	</properties>
 
 
 	<dependencies>
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>${guava-version}</version>
+		</dependency>
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>

@@ -1,5 +1,7 @@
 package com.ldbc.datachecker;
 
+import com.google.common.base.Function;
+
 public class Utils
 {
     public static String[] joinArrays( String[] array1, String[] array2 )
@@ -29,5 +31,18 @@ public class Utils
         }
         languagesRegex.append( strings[strings.length - 1] );
         return languagesRegex.toString();
+    }
+
+    public static <INPUT, OUTPUT> Function<INPUT, OUTPUT> constantFun( final OUTPUT output )
+    {
+        return new Function<INPUT, OUTPUT>()
+        {
+            @Override
+            public OUTPUT apply( INPUT input )
+            {
+                return output;
+            }
+
+        };
     }
 }

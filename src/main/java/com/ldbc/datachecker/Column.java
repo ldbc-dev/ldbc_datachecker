@@ -3,31 +3,51 @@ package com.ldbc.datachecker;
 import java.text.Normalizer;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import org.apache.commons.validator.routines.UrlValidator;
 
+import com.google.common.base.Function;
 import com.ldbc.datachecker.FailedCheckPolicy.FailedColumnCheckPolicy;
 
-public abstract class Column<T>
+public abstract class Column<VALUE_TYPE, COLUMN_TYPE extends Column>
 {
-    private ColumnRef<T> saveToColumnRef = new ColumnRef.NothingColumnRef<T>( "save" );
-    private ColumnRef<T> checkInColumnRef = new ColumnRef.NothingColumnRef<T>( "check" );
+    private List<ColumnRef<VALUE_TYPE>> saveToColumnRefs = new ArrayList<ColumnRef<VALUE_TYPE>>();
+    private List<ColumnRef<VALUE_TYPE>> checkInColumnRefs = new ArrayList<ColumnRef<VALUE_TYPE>>();
+    private List<ColumnRef<VALUE_TYPE>> saveToAndCheckUniqueColumnRefs = new ArrayList<ColumnRef<VALUE_TYPE>>();
 
     public final void check( FailedColumnCheckPolicy policy, String columnString ) throws ColumnCheckException
     {
         try
         {
-            T value = parse( columnString );
-            // TODO do not always add, this is a hack for now
-            saveToColumnRef.add( value );
+            VALUE_TYPE value = parse( columnString );
 
-            // TODO do not always check, this is a hack for now
-            if ( false == checkInColumnRef.contains( value ) )
+            for ( ColumnRef<VALUE_TYPE> columnRef : saveToColumnRefs )
             {
-                String errMsg = String.format( "Value %s not found in ColumnRef[%s]", value, checkInColumnRef.getName() );
-                policy.handleFailedColumnCheck( columnString, errMsg );
+                columnRef.add( value );
+            }
+
+            for ( ColumnRef<VALUE_TYPE> columnRef : saveToAndCheckUniqueColumnRefs )
+            {
+                boolean duplicate = ( false == columnRef.add( value ) );
+                if ( duplicate )
+                {
+                    String errMsg = String.format( "Value %s part of duplicate entry in ColumnRef[%s]", value,
+                            columnRef.getName() );
+                    policy.handleFailedColumnCheck( columnString, errMsg );
+                }
+            }
+
+            for ( ColumnRef<VALUE_TYPE> columnRef : checkInColumnRefs )
+            {
+                if ( false == columnRef.contains( value ) )
+                {
+                    String errMsg = String.format( "Value %s not found in ColumnRef[%s]", value, columnRef.getName() );
+                    policy.handleFailedColumnCheck( columnString, errMsg );
+                }
             }
 
             doCheck( policy, value );
@@ -39,20 +59,27 @@ public abstract class Column<T>
         }
     }
 
-    public abstract T parse( String columnString ) throws ColumnParseException;
+    public abstract VALUE_TYPE parse( String columnString ) throws ColumnParseException;
 
-    protected abstract void doCheck( FailedColumnCheckPolicy policy, T columnValue ) throws ColumnCheckException;
+    protected abstract void doCheck( FailedColumnCheckPolicy policy, VALUE_TYPE columnValue )
+            throws ColumnCheckException;
 
-    public Column<T> saveRefTo( ColumnRef<T> columnRef )
+    public final COLUMN_TYPE saveTo( final ColumnRef<VALUE_TYPE> columnRef )
     {
-        this.saveToColumnRef = columnRef;
-        return this;
+        saveToColumnRefs.add( columnRef );
+        return (COLUMN_TYPE) this;
     }
 
-    public final Column<T> checkRefIn( ColumnRef<T> columnRef )
+    public final COLUMN_TYPE checkIn( ColumnRef<VALUE_TYPE> columnRef )
     {
-        this.checkInColumnRef = columnRef;
-        return this;
+        checkInColumnRefs.add( columnRef );
+        return (COLUMN_TYPE) this;
+    }
+
+    public final COLUMN_TYPE saveToGroupAndCheckUnique( ColumnRef<VALUE_TYPE> columnRef )
+    {
+        saveToAndCheckUniqueColumnRefs.add( columnRef );
+        return (COLUMN_TYPE) this;
     }
 
     /*
@@ -98,36 +125,58 @@ public abstract class Column<T>
      * Column Types
      */
 
-    public abstract static class NumberColumn<T extends Number> extends Column<T>
+    public abstract static class NumberColumn<T extends Number, C extends NumberColumn> extends Column<T, C>
     {
-        private T min;
-        private boolean checkMin = false;
-        private T max;
-        private boolean checkMax = false;
-        private boolean checkConsecutive = false;
+        private T minVal;
+        private T maxVal;
         private T nextExpectedValue;
-        private T incrementBy;
 
-        public NumberColumn<T> withConsecutive( T firstVal, T incrementBy )
+        protected Function<T, Boolean> minViolated = Utils.constantFun( false );
+        private Function<T, Boolean> maxViolated = Utils.constantFun( false );
+        private Function<T, Boolean> consecutiveViolated = Utils.constantFun( false );
+
+        public C withConsecutive( final T firstVal, final T incrementBy )
         {
-            this.checkConsecutive = true;
-            this.nextExpectedValue = firstVal;
-            this.incrementBy = incrementBy;
-            return this;
+            nextExpectedValue = firstVal;
+            consecutiveViolated = new Function<T, Boolean>()
+            {
+                @Override
+                public Boolean apply( T input )
+                {
+                    if ( false == input.equals( nextExpectedValue ) ) return true;
+                    nextExpectedValue = sum( nextExpectedValue, incrementBy );
+                    return false;
+                }
+            };
+            return (C) this;
         }
 
-        public NumberColumn<T> withMin( T min )
+        public C withMin( final T min )
         {
-            this.checkMin = true;
-            this.min = min;
-            return this;
+            minViolated = new Function<T, Boolean>()
+            {
+                @Override
+                public Boolean apply( T input )
+                {
+                    return lessThan( input, min );
+                }
+            };
+            this.minVal = min;
+            return (C) this;
         }
 
-        public NumberColumn<T> withMax( T max )
+        public C withMax( final T max )
         {
-            this.checkMax = true;
-            this.max = max;
-            return this;
+            maxViolated = new Function<T, Boolean>()
+            {
+                @Override
+                public Boolean apply( T input )
+                {
+                    return greaterThan( input, max );
+                }
+            };
+            this.maxVal = max;
+            return (C) this;
         }
 
         protected abstract T sum( T t1, T t2 );
@@ -141,20 +190,17 @@ public abstract class Column<T>
         {
             try
             {
-                if ( ( checkMin && lessThan( columnValue, min ) ) || ( checkMax && greaterThan( columnValue, max ) ) )
+                if ( minViolated.apply( columnValue ) || maxViolated.apply( columnValue ) )
                 {
                     policy.handleFailedColumnCheck( columnValue.toString(),
-                            String.format( "%s outside of range (%s,%s)", columnValue, min, max ) );
+                            String.format( "%s outside of range (%s,%s)", columnValue, minVal, maxVal ) );
                 }
-                if ( true == checkConsecutive )
+                if ( consecutiveViolated.apply( columnValue ) )
                 {
-                    if ( false == nextExpectedValue.equals( columnValue ) )
-                    {
-                        policy.handleFailedColumnCheck( columnValue.toString(), String.format(
-                                "Values should be consecutive, expected %s found %s", nextExpectedValue, columnValue ) );
-                    }
-                    nextExpectedValue = sum( nextExpectedValue, incrementBy );
+                    policy.handleFailedColumnCheck( columnValue.toString(), String.format(
+                            "Values should be consecutive, expected %s found %s", nextExpectedValue, columnValue ) );
                 }
+
             }
             catch ( NumberFormatException e )
             {
@@ -164,7 +210,7 @@ public abstract class Column<T>
         }
     }
 
-    public static class IntegerColumn extends NumberColumn<Integer>
+    public static class IntegerColumn extends NumberColumn<Integer, IntegerColumn>
     {
         @Override
         public Integer parse( String columnString ) throws ColumnParseException
@@ -198,7 +244,7 @@ public abstract class Column<T>
         }
     }
 
-    public static class LongColumn extends NumberColumn<Long>
+    public static class LongColumn extends NumberColumn<Long, LongColumn>
     {
 
         @Override
@@ -234,7 +280,7 @@ public abstract class Column<T>
 
     }
 
-    public static class StringColumn extends Column<String>
+    public static class StringColumn extends Column<String, StringColumn>
     {
         private Pattern regex = null;
         private boolean keepAccents = true;
@@ -283,7 +329,7 @@ public abstract class Column<T>
         }
     }
 
-    public static class EmailAddressColumn extends Column<String>
+    public static class EmailAddressColumn extends Column<String, EmailAddressColumn>
     {
         // private final Pattern regex = Pattern.compile(
         // "^[\\d\\w\\.\\-_]+@[[\\d\\w\\-]+\\.]+\\w{2,4}$" );
@@ -307,7 +353,7 @@ public abstract class Column<T>
     }
 
     // TODO change to withFiniteSet/isFiniteSet rather than a separate column
-    public static class FiniteSetColumn extends Column<String>
+    public static class FiniteSetColumn extends Column<String, FiniteSetColumn>
     {
         private Pattern regex = null;
 
@@ -334,8 +380,10 @@ public abstract class Column<T>
     }
 
     // TODO withRange(start,end) like min/max
-    public static class DateColumn extends Column<Date>
+    public static class DateColumn extends Column<Date, DateColumn>
     {
+        protected Function<Date, Boolean> rangeViolated = Utils.constantFun( false );
+
         /*
         See http://docs.oracle.com/javase/6/docs/api/java/text/SimpleDateFormat.html 
         
@@ -352,16 +400,40 @@ public abstract class Column<T>
         "yyyy-MM-dd'T'HH:mm:ss.SSSZ"            2001-07-04T12:08:56.235-0700         
         */
         private final SimpleDateFormat dateFormat;
+        private Date min;
+        private Date max;
 
         public DateColumn( String datePattern )
         {
             this.dateFormat = new SimpleDateFormat( datePattern );
         }
 
+        public DateColumn withRange( final Date min, final Date max )
+        {
+            rangeViolated = new Function<Date, Boolean>()
+            {
+                @Override
+                public Boolean apply( Date input )
+                {
+                    if ( input.compareTo( min ) < 0 ) return true;
+                    if ( input.compareTo( max ) > 0 ) return true;
+                    return false;
+                }
+            };
+            this.min = min;
+            this.max = max;
+            return this;
+        }
+
         @Override
         protected void doCheck( FailedColumnCheckPolicy policy, Date columnValue ) throws ColumnCheckException
         {
-            // TODO withRange, etc.
+            if ( rangeViolated.apply( columnValue ) )
+            {
+                policy.handleFailedColumnCheck( columnValue.toString(), String.format(
+                        "Value %s is out of range [%s, %s]", dateFormat.format( columnValue ),
+                        dateFormat.format( min ), dateFormat.format( max ) ) );
+            }
         }
 
         @Override
@@ -379,7 +451,7 @@ public abstract class Column<T>
         }
     }
 
-    public static class UrlColumn extends Column<String>
+    public static class UrlColumn extends Column<String, UrlColumn>
     {
         // private String encoding = null;
         private boolean keepAccents = true;

@@ -204,7 +204,8 @@ public class SocialNetCheck implements Check
     public List<DirectoryCheck> getDirectoryChecks()
     {
         List<DirectoryCheck> directoryChecks = new ArrayList<DirectoryCheck>();
-        directoryChecks.add( new DirectoryContainsAllAndOnlyExpectedCsvFiles( SocialNet.allCsvFilenames( dataDirectory ) ) );
+        directoryChecks.add( new DirectoryContainsAllAndOnlyExpectedCsvFiles(
+                SocialNetConstants.allCsvFilenames( dataDirectory ) ) );
         return directoryChecks;
     }
 
@@ -221,33 +222,34 @@ public class SocialNetCheck implements Check
 
         // id|creationDate|locationIP|browserUsed|content
         fileChecks.add( new ExpectedColumns( inDir( "comment.csv" ),
-                isLong().withConsecutive( 0l, idsShouldIncrementBy ).saveRefTo( commentsRef ),
-                isDate( SocialNet.dateTimeFormat() ), isString().withRegex( SocialNet.locationIpRegex() ),
-                isFiniteSet( SocialNet.browsers() ), isString() ) );
+                isLong().withConsecutive( 0l, idsShouldIncrementBy ).saveTo( commentsRef ),
+                isDate( SocialNetConstants.dateTimeFormat() ), isString().withRegex(
+                        SocialNetConstants.locationIpRegex() ), isFiniteSet( SocialNetConstants.browsers() ),
+                isString() ) );
 
         ColumnRef<Long> forumsRef = new ColumnRef.LongColumnRef( "forums" );
 
         // id|title|creationDate
         // TODO id = isLong().withConsecutive( 0l, idsShouldIncrementBy )
-        fileChecks.add( new ExpectedColumns( inDir( "forum.csv" ), isLong().saveRefTo( forumsRef ), isString(),
-                isDate( SocialNet.dateTimeFormat() ) ) );
+        fileChecks.add( new ExpectedColumns( inDir( "forum.csv" ), isLong().saveTo( forumsRef ), isString(),
+                isDate( SocialNetConstants.dateTimeFormat() ) ) );
 
         ColumnRef<Long> organisationsRef = new ColumnRef.LongColumnRef( "organisations" );
 
         // id|type|name|url
         // TODO url = isUrl()
         fileChecks.add( new ExpectedColumns( inDir( "organisation.csv" ), isLong().withConsecutive( 0l,
-                idsShouldIncrementBy ).saveRefTo( organisationsRef ), isFiniteSet( SocialNet.organisationTypes() ),
-                isString(), isString() ) );
+                idsShouldIncrementBy ).saveTo( organisationsRef ),
+                isFiniteSet( SocialNetConstants.organisationTypes() ), isString(), isString() ) );
 
         ColumnRef<Long> personsRef = new ColumnRef.LongColumnRef( "persons" );
 
         // id|firstName|lastName|gender|birthday|creationDate|locationIP|browserUsed
         // TODO id = isLong().withConsecutive( 0l, idsShouldIncrementBy )
-        fileChecks.add( new ExpectedColumns( inDir( "person.csv" ), isLong().saveRefTo( personsRef ), isString(),
-                isString(), isFiniteSet( SocialNet.genders() ), isDate( SocialNet.dateFormat() ),
-                isDate( SocialNet.dateTimeFormat() ), isString().withRegex( SocialNet.locationIpRegex() ),
-                isFiniteSet( SocialNet.browsers() ) ) );
+        fileChecks.add( new ExpectedColumns( inDir( "person.csv" ), isLong().saveTo( personsRef ), isString(),
+                isString(), isFiniteSet( SocialNetConstants.genders() ), isDate( SocialNetConstants.dateFormat() ),
+                isDate( SocialNetConstants.dateTimeFormat() ), isString().withRegex(
+                        SocialNetConstants.locationIpRegex() ), isFiniteSet( SocialNetConstants.browsers() ) ) );
 
         // start at line 1 instead of 0 - don't count headers
         int startLine = 1;
@@ -258,25 +260,26 @@ public class SocialNetCheck implements Check
         // id|name|url|type
         // TODO url = isUrl()
         // TODO id = isLong().withConsecutive( 0l, idsShouldIncrementBy )
-        fileChecks.add( new ExpectedColumns( inDir( "place.csv" ), isLong().saveRefTo( placesRef ), isString(),
-                isString(), isFiniteSet( SocialNet.placeTypes() ) ) );
+        fileChecks.add( new ExpectedColumns( inDir( "place.csv" ), isLong().saveTo( placesRef ), isString(),
+                isString(), isFiniteSet( SocialNetConstants.placeTypes() ) ) );
 
         ColumnRef<Long> postsRef = new ColumnRef.LongColumnRef( "posts" );
 
         // id|imageFile|creationDate|locationIP|browserUsed|language|content
         boolean imageIsOptional = true;
         fileChecks.add( new ExpectedColumns( inDir( "post.csv" ),
-                isLong().withConsecutive( 0l, idsShouldIncrementBy ).saveRefTo( postsRef ), isString().withRegex(
-                        SocialNet.imageFileRegex( imageIsOptional ) ), isDate( SocialNet.dateTimeFormat() ),
-                isString().withRegex( SocialNet.locationIpRegex() ), isFiniteSet( SocialNet.browsers() ),
-                isFiniteSet( SocialNet.languages( true ) ), isString() ) );
+                isLong().withConsecutive( 0l, idsShouldIncrementBy ).saveTo( postsRef ), isString().withRegex(
+                        SocialNetConstants.imageFileRegex( imageIsOptional ) ),
+                isDate( SocialNetConstants.dateTimeFormat() ), isString().withRegex(
+                        SocialNetConstants.locationIpRegex() ), isFiniteSet( SocialNetConstants.browsers() ),
+                isFiniteSet( SocialNetConstants.languages( true ) ), isString() ) );
 
         ColumnRef<Long> tagclassesRef = new ColumnRef.LongColumnRef( "tagclasses" );
 
         // id|name|url
         // TODO url = isUrl()
         // TODO id = isLong().withConsecutive( 0l, idsShouldIncrementBy )
-        fileChecks.add( new ExpectedColumns( inDir( "tagclass.csv" ), isLong().saveRefTo( tagclassesRef ), isString(),
+        fileChecks.add( new ExpectedColumns( inDir( "tagclass.csv" ), isLong().saveTo( tagclassesRef ), isString(),
                 isString() ) );
 
         ColumnRef<Long> tagsRef = new ColumnRef.LongColumnRef( "tags" );
@@ -284,103 +287,109 @@ public class SocialNetCheck implements Check
         // id|name|url
         // TODO url = isUrl()
         // TODO id = isLong().withConsecutive( 0l, idsShouldIncrementBy )
-        fileChecks.add( new ExpectedColumns( inDir( "tag.csv" ), isLong().saveRefTo( tagsRef ), isString(), isString() ) );
+        fileChecks.add( new ExpectedColumns( inDir( "tag.csv" ), isLong().saveTo( tagsRef ), isString(), isString() ) );
 
         /*
         * Relationships
         */
 
         // Comment.id|Person.id
-        fileChecks.add( new ExpectedColumns( inDir( "comment_hasCreator_person.csv" ),
-                isLong().checkRefIn( commentsRef ), isLong().checkRefIn( personsRef ) ) );
+        fileChecks.add( new ExpectedColumns( inDir( "comment_hasCreator_person.csv" ), isLong().checkIn( commentsRef ),
+                isLong().checkIn( personsRef ) ) );
 
         // Comment.id|Place.id
-        fileChecks.add( new ExpectedColumns( inDir( "comment_isLocatedIn_place.csv" ),
-                isLong().checkRefIn( commentsRef ), isLong().checkRefIn( placesRef ) ) );
+        fileChecks.add( new ExpectedColumns( inDir( "comment_isLocatedIn_place.csv" ), isLong().checkIn( commentsRef ),
+                isLong().checkIn( placesRef ) ) );
 
         // Comment.id|Comment.id
-        fileChecks.add( new ExpectedColumns( inDir( "comment_replyOf_comment.csv" ),
-                isLong().checkRefIn( commentsRef ), isLong().checkRefIn( commentsRef ) ) );
+        fileChecks.add( new ExpectedColumns( inDir( "comment_replyOf_comment.csv" ), isLong().checkIn( commentsRef ),
+                isLong().checkIn( commentsRef ) ) );
 
         // Comment.id|Post.id
-        fileChecks.add( new ExpectedColumns( inDir( "comment_replyOf_post.csv" ), isLong().checkRefIn( commentsRef ),
-                isLong().checkRefIn( postsRef ) ) );
+        fileChecks.add( new ExpectedColumns( inDir( "comment_replyOf_post.csv" ), isLong().checkIn( commentsRef ),
+                isLong().checkIn( postsRef ) ) );
 
         // Forum.id|Post.id
-        fileChecks.add( new ExpectedColumns( inDir( "forum_containerOf_post.csv" ), isLong().checkRefIn( forumsRef ),
-                isLong().checkRefIn( postsRef ) ) );
+        fileChecks.add( new ExpectedColumns( inDir( "forum_containerOf_post.csv" ), isLong().checkIn( forumsRef ),
+                isLong().checkIn( postsRef ) ) );
 
         // Forum.id|Person.id|joinDate
-        fileChecks.add( new ExpectedColumns( inDir( "forum_hasMember_person.csv" ), isLong().checkRefIn( forumsRef ),
-                isLong().checkRefIn( personsRef ), isDate( SocialNet.dateTimeFormat() ) ) );
+        fileChecks.add( new ExpectedColumns( inDir( "forum_hasMember_person.csv" ), isLong().checkIn( forumsRef ),
+                isLong().checkIn( personsRef ), isDate( SocialNetConstants.dateTimeFormat() ) ) );
 
         // Forum.id|Person.id
-        fileChecks.add( new ExpectedColumns( inDir( "forum_hasModerator_person.csv" ),
-                isLong().checkRefIn( forumsRef ), isLong().checkRefIn( personsRef ) ) );
+        fileChecks.add( new ExpectedColumns( inDir( "forum_hasModerator_person.csv" ), isLong().checkIn( forumsRef ),
+                isLong().checkIn( personsRef ) ) );
 
         // Forum.id|Tag.id
-        fileChecks.add( new ExpectedColumns( inDir( "forum_hasTag_tag.csv" ), isLong().checkRefIn( forumsRef ),
-                isLong().checkRefIn( tagsRef ) ) );
+        fileChecks.add( new ExpectedColumns( inDir( "forum_hasTag_tag.csv" ), isLong().checkIn( forumsRef ),
+                isLong().checkIn( tagsRef ) ) );
 
         // Person.id|email
-        fileChecks.add( new ExpectedColumns( inDir( "person_email_emailaddress.csv" ),
-                isLong().checkRefIn( personsRef ), isEmailAddress() ) );
+        // fileChecks.add( new ExpectedColumns( inDir(
+        // "person_email_emailaddress.csv" ), isLong().checkIn( personsRef ),
+        // isEmailAddress() ) );
+        fileChecks.add( new ExpectedColumns( inDir( "person_email_emailaddress.csv" ), isLong().checkIn( personsRef ),
+                isString() ) );
 
         // Person.id|Tag.id
-        fileChecks.add( new ExpectedColumns( inDir( "person_hasInterest_tag.csv" ), isLong().checkRefIn( personsRef ),
-                isLong().checkRefIn( tagsRef ) ) );
+        fileChecks.add( new ExpectedColumns( inDir( "person_hasInterest_tag.csv" ), isLong().checkIn( personsRef ),
+                isLong().checkIn( tagsRef ) ) );
 
         // Person.id|Place.id
-        fileChecks.add( new ExpectedColumns( inDir( "person_isLocatedIn_place.csv" ),
-                isLong().checkRefIn( personsRef ), isLong().checkRefIn( placesRef ) ) );
+        fileChecks.add( new ExpectedColumns( inDir( "person_isLocatedIn_place.csv" ), isLong().checkIn( personsRef ),
+                isLong().checkIn( placesRef ) ) );
+
+        ColumnRef<Long> personPersonRef = new ColumnRef.MultiLongColumnRef( "personperson", 2, true );
 
         // Person.id|Person.id
-        fileChecks.add( new ExpectedColumns( inDir( "person_knows_person.csv" ), isLong().checkRefIn( personsRef ),
-                isLong().checkRefIn( personsRef ) ) );
+        fileChecks.add( new ExpectedColumns( inDir( "person_knows_person.csv" ),
+                isLong().checkIn( personsRef ).saveToGroupAndCheckUnique( personPersonRef ), isLong().checkIn(
+                        personsRef ).saveToGroupAndCheckUnique( personPersonRef ) ) );
 
         // Person.id|Post.id|creationDate
-        fileChecks.add( new ExpectedColumns( inDir( "person_likes_post.csv" ), isLong().checkRefIn( personsRef ),
-                isLong().checkRefIn( postsRef ), isDate( SocialNet.dateTimeFormat() ) ) );
+        fileChecks.add( new ExpectedColumns( inDir( "person_likes_post.csv" ), isLong().checkIn( personsRef ),
+                isLong().checkIn( postsRef ), isDate( SocialNetConstants.dateTimeFormat() ) ) );
 
         // Person.id|language
-        fileChecks.add( new ExpectedColumns( inDir( "person_speaks_language.csv" ), isLong().checkRefIn( personsRef ),
-                isFiniteSet( SocialNet.languages() ) ) );
+        fileChecks.add( new ExpectedColumns( inDir( "person_speaks_language.csv" ), isLong().checkIn( personsRef ),
+                isFiniteSet( SocialNetConstants.languages() ) ) );
 
         // Person.id|Organisation.id|classYear
-        fileChecks.add( new ExpectedColumns( inDir( "person_studyAt_organisation.csv" ), isLong().checkRefIn(
-                personsRef ), isLong().checkRefIn( organisationsRef ), isInteger() ) );
+        fileChecks.add( new ExpectedColumns( inDir( "person_studyAt_organisation.csv" ),
+                isLong().checkIn( personsRef ), isLong().checkIn( organisationsRef ), isInteger() ) );
 
         // Person.id|Organisation.id|workFrom
-        fileChecks.add( new ExpectedColumns( inDir( "person_workAt_organisation.csv" ),
-                isLong().checkRefIn( personsRef ), isLong().checkRefIn( organisationsRef ), isInteger() ) );
+        fileChecks.add( new ExpectedColumns( inDir( "person_workAt_organisation.csv" ), isLong().checkIn( personsRef ),
+                isLong().checkIn( organisationsRef ), isInteger() ) );
 
         // Place.id|Place.id
-        fileChecks.add( new ExpectedColumns( inDir( "place_isPartOf_place.csv" ), isLong().checkRefIn( placesRef ),
-                isLong().checkRefIn( placesRef ) ) );
+        fileChecks.add( new ExpectedColumns( inDir( "place_isPartOf_place.csv" ), isLong().checkIn( placesRef ),
+                isLong().checkIn( placesRef ) ) );
 
         // Post.id|Person.id
-        fileChecks.add( new ExpectedColumns( inDir( "post_hasCreator_person.csv" ), isLong().checkRefIn( postsRef ),
-                isLong().checkRefIn( personsRef ) ) );
+        fileChecks.add( new ExpectedColumns( inDir( "post_hasCreator_person.csv" ), isLong().checkIn( postsRef ),
+                isLong().checkIn( personsRef ) ) );
 
         // Post.id|Tag.id
-        fileChecks.add( new ExpectedColumns( inDir( "post_hasTag_tag.csv" ), isLong().checkRefIn( postsRef ),
-                isLong().checkRefIn( tagsRef ) ) );
+        fileChecks.add( new ExpectedColumns( inDir( "post_hasTag_tag.csv" ), isLong().checkIn( postsRef ),
+                isLong().checkIn( tagsRef ) ) );
 
         // Post.id|Place.id
-        fileChecks.add( new ExpectedColumns( inDir( "post_isLocatedIn_place.csv" ), isLong().checkRefIn( postsRef ),
-                isLong().checkRefIn( placesRef ) ) );
+        fileChecks.add( new ExpectedColumns( inDir( "post_isLocatedIn_place.csv" ), isLong().checkIn( postsRef ),
+                isLong().checkIn( placesRef ) ) );
 
         // TagClass.id|TagClass.id
-        fileChecks.add( new ExpectedColumns( inDir( "tagclass_isSubclassOf_tagclass.csv" ), isLong().checkRefIn(
-                tagclassesRef ), isLong().checkRefIn( tagclassesRef ) ) );
+        fileChecks.add( new ExpectedColumns( inDir( "tagclass_isSubclassOf_tagclass.csv" ), isLong().checkIn(
+                tagclassesRef ), isLong().checkIn( tagclassesRef ) ) );
 
         // Tag.id|TagClass.id
-        fileChecks.add( new ExpectedColumns( inDir( "tag_hasType_tagclass.csv" ), isLong().checkRefIn( tagsRef ),
-                isLong().checkRefIn( tagclassesRef ) ) );
+        fileChecks.add( new ExpectedColumns( inDir( "tag_hasType_tagclass.csv" ), isLong().checkIn( tagsRef ),
+                isLong().checkIn( tagclassesRef ) ) );
 
         // Organisation.id|Place.id
-        fileChecks.add( new ExpectedColumns( inDir( "organisation_isLocatedIn_place.csv" ), isLong().checkRefIn(
-                organisationsRef ), isLong().checkRefIn( placesRef ) ) );
+        fileChecks.add( new ExpectedColumns( inDir( "organisation_isLocatedIn_place.csv" ), isLong().checkIn(
+                organisationsRef ), isLong().checkIn( placesRef ) ) );
 
         return fileChecks;
     }

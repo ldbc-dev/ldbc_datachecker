@@ -4,7 +4,7 @@ import java.io.File;
 
 import com.ldbc.datachecker.Utils;
 
-public class SocialNet
+public class SocialNetConstants
 {
     public static String[] allCsvFilenames( File directory )
     {

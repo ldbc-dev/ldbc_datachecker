@@ -4,12 +4,14 @@ import static com.ldbc.datachecker.Column.*;
 import static org.junit.Assert.*;
 import static org.hamcrest.CoreMatchers.*;
 
+import java.util.Calendar;
 import java.util.Date;
 
 import org.junit.Test;
 
 import com.ldbc.datachecker.Column;
 import com.ldbc.datachecker.ColumnCheckException;
+import com.ldbc.datachecker.ColumnRef;
 import com.ldbc.datachecker.FailedCheckPolicy;
 import com.ldbc.datachecker.checks.file.ExpectedLength;
 import com.ldbc.datachecker.failure.TerminateFailedCheckPolicy;
@@ -17,12 +19,126 @@ import com.ldbc.datachecker.failure.TerminateFailedCheckPolicy;
 public class ColumnTest
 {
     @Test
+    public void columnRefChecksShouldDetectWhenValueExists()
+    {
+        // Given
+        ColumnRef<Long> checkInColumnRef = new ColumnRef.LongColumnRef( "checkIn" );
+        LongColumn longColumn = isLong().checkIn( checkInColumnRef );
+
+        // When
+        checkInColumnRef.add( 2L );
+
+        // Then
+        assertThat( columnCheckPassed( longColumn, "1" ), is( false ) );
+        assertThat( columnCheckPassed( longColumn, "2" ), is( true ) );
+        assertThat( columnCheckPassed( longColumn, "3" ), is( false ) );
+    }
+
+    @Test
+    public void columnShouldAddValuesToColumnCheck()
+    {
+        // Given
+        ColumnRef<Long> checkInColumnRef = new ColumnRef.LongColumnRef( "checkIn" );
+
+        LongColumn longWriteColumn = isLong().saveTo( checkInColumnRef );
+        LongColumn longReadColumn = isLong().checkIn( checkInColumnRef );
+
+        // When
+        assertThat( columnCheckPassed( longWriteColumn, "2" ), is( true ) );
+
+        // Then
+        assertThat( columnCheckPassed( longReadColumn, "1" ), is( false ) );
+        assertThat( columnCheckPassed( longReadColumn, "2" ), is( true ) );
+        assertThat( columnCheckPassed( longReadColumn, "3" ), is( false ) );
+    }
+
+    @Test
+    public void multiColumnShouldAddValuesAndCheckThem()
+    {
+        // Given
+        ColumnRef<Long> multiColumnRef = new ColumnRef.MultiLongColumnRef( "multi", 2, false );
+        LongColumn column1 = isLong().saveToGroupAndCheckUnique( multiColumnRef );
+        LongColumn column2 = isLong().saveToGroupAndCheckUnique( multiColumnRef );
+        LongColumn column3 = isLong();
+
+        // When
+
+        // Then
+
+        // 1 2 (unique)
+        assertThat( columnCheckPassed( column1, "1" ), is( true ) );
+        assertThat( columnCheckPassed( column2, "2" ), is( true ) );
+        assertThat( columnCheckPassed( column3, "3" ), is( true ) );
+
+        // 1 2 (duplicate)
+        assertThat( columnCheckPassed( column1, "1" ), is( true ) );
+        assertThat( columnCheckPassed( column2, "2" ), is( false ) );
+        assertThat( columnCheckPassed( column3, "3" ), is( true ) );
+        assertThat( columnCheckPassed( column3, "3" ), is( true ) );
+        assertThat( columnCheckPassed( column3, "3" ), is( true ) );
+
+        // 1 2 (duplicate)
+        assertThat( columnCheckPassed( column1, "1" ), is( true ) );
+        assertThat( columnCheckPassed( column2, "2" ), is( false ) );
+        assertThat( columnCheckPassed( column3, "3" ), is( true ) );
+
+        // 1 1 (unique)
+        assertThat( columnCheckPassed( column1, "1" ), is( true ) );
+        assertThat( columnCheckPassed( column2, "1" ), is( true ) );
+        assertThat( columnCheckPassed( column3, "3" ), is( true ) );
+
+        // 1 1 (duplicate)
+        assertThat( columnCheckPassed( column1, "1" ), is( true ) );
+        assertThat( columnCheckPassed( column2, "1" ), is( false ) );
+    }
+
+    @Test
+    public void multiColumnShouldAddValuesAndCheckThemWithSort()
+    {
+        // Given
+        ColumnRef<Long> multiColumnRef = new ColumnRef.MultiLongColumnRef( "multi", 2, true );
+        LongColumn column1 = isLong().saveToGroupAndCheckUnique( multiColumnRef );
+        LongColumn column2 = isLong().saveToGroupAndCheckUnique( multiColumnRef );
+        LongColumn column3 = isLong();
+
+        // When
+
+        // Then
+
+        // 1 2 (unique)
+        assertThat( columnCheckPassed( column1, "1" ), is( true ) );
+        assertThat( columnCheckPassed( column2, "2" ), is( true ) );
+        assertThat( columnCheckPassed( column3, "3" ), is( true ) );
+
+        // 1 2 (duplicate)
+        assertThat( columnCheckPassed( column1, "1" ), is( true ) );
+        assertThat( columnCheckPassed( column2, "2" ), is( false ) );
+        assertThat( columnCheckPassed( column3, "3" ), is( true ) );
+        assertThat( columnCheckPassed( column3, "3" ), is( true ) );
+        assertThat( columnCheckPassed( column3, "3" ), is( true ) );
+
+        // 1 2 (duplicate)
+        assertThat( columnCheckPassed( column1, "2" ), is( true ) );
+        assertThat( columnCheckPassed( column2, "1" ), is( false ) );
+        assertThat( columnCheckPassed( column3, "3" ), is( true ) );
+
+        // 1 1 (unique)
+        assertThat( columnCheckPassed( column1, "1" ), is( true ) );
+        assertThat( columnCheckPassed( column2, "1" ), is( true ) );
+        assertThat( columnCheckPassed( column3, "3" ), is( true ) );
+
+        // 1 1 (duplicate)
+        assertThat( columnCheckPassed( column1, "1" ), is( true ) );
+        assertThat( columnCheckPassed( column2, "1" ), is( false ) );
+    }
+
+    @Test
     public void integerColumnShouldOnlyPassWithInteger()
     {
         // Given
-        Column<Integer> column = isInteger();
-        Column<Integer> columnWithMinMax = isInteger().withMin( 0 ).withMax( 2 );
-        Column<Integer> columnWithConsecutive = isInteger().withConsecutive( 1, 1 );
+        IntegerColumn column = isInteger();
+        IntegerColumn columnWithMinMax = isInteger().withMin( 0 ).withMax( 2 );
+        IntegerColumn columnWithConsecutive = isInteger().withConsecutive( 1, 1 );
 
         // When
         String normalPositive1Int = "1";
@@ -50,8 +166,8 @@ public class ColumnTest
     public void longColumnShouldOnlyPassWithLong()
     {
         // Given
-        Column<Long> column = isLong();
-        Column<Long> columnWithMinMax = isLong().withMin( 0l ).withMax( 2l );
+        LongColumn column = isLong();
+        LongColumn columnWithMinMax = isLong().withMin( 0l ).withMax( 2l );
 
         // When
         String normalPositiveLong = "1";
@@ -72,8 +188,8 @@ public class ColumnTest
     public void stringColumnShouldOnlyPassWithString()
     {
         // Given
-        Column<String> column = isString();
-        Column<String> columnWithPattern = isString().withRegex( "string1|string2" );
+        StringColumn column = isString();
+        StringColumn columnWithPattern = isString().withRegex( "string1|string2" );
 
         // When
         String string1 = "string1";
@@ -92,7 +208,7 @@ public class ColumnTest
     public void finiteSetColumnShouldOnlyPassWithFiniteSet()
     {
         // Given
-        Column<String> column = isFiniteSet( "one", "two", "three" );
+        FiniteSetColumn column = isFiniteSet( "one", "two", "three" );
 
         // When
         String valid1 = "one";
@@ -116,10 +232,10 @@ public class ColumnTest
     public void urlColumnShouldOnlyPassWithUrl()
     {
         // Given
-        Column<String> urlColumn = isUrl();
+        UrlColumn urlColumn = isUrl();
         // Column urlColumnWithAsciiConversion = isUrl().withEncoding( "UTF-8"
         // );
-        Column<String> urlColumnWithoutAccents = isUrl().withAccents( false );
+        UrlColumn urlColumnWithoutAccents = isUrl().withAccents( false );
 
         // When
         String validUrl = "http://dbpedia.org/resource/Sao_Paulo";
@@ -152,22 +268,34 @@ public class ColumnTest
     public void dateColumnShouldOnlyPassWithDate()
     {
         // Given
-        Column<Date> dateColumn = isDate( "yyyy-MM-dd'T'HH:mm:ss'Z'" );
+        String dateFormatString = "yyyy-MM-dd'T'HH:mm:ss'Z'";
+
+        Calendar c = Calendar.getInstance();
+        c.set( 2010, Calendar.MARCH, 10 );
+        Date min = c.getTime();
+        c.set( 2010, Calendar.MARCH, 12 );
+        Date max = c.getTime();
+
+        DateColumn dateColumn = isDate( dateFormatString ).withRange( min, max );
 
         // When
         String validDate = "2010-03-11T11:36:58Z";
-        String invalidDate = "2010-03-11T11:36:58+0200";
+        String invalidDateTooEarly = "2010-03-10T11:36:58Z";
+        String invalidDateTooLate = "2010-03-13T11:36:58Z";
+        String invalidDateWrongFormat = "2010-03-11T11:36:58+0200";
 
         // Then
         assertThat( columnCheckPassed( dateColumn, validDate ), is( true ) );
-        assertThat( columnCheckPassed( dateColumn, invalidDate ), is( false ) );
+        assertThat( columnCheckPassed( dateColumn, invalidDateTooEarly ), is( false ) );
+        assertThat( columnCheckPassed( dateColumn, invalidDateTooLate ), is( false ) );
+        assertThat( columnCheckPassed( dateColumn, invalidDateWrongFormat ), is( false ) );
     }
 
     @Test
     public void emailColumnShouldOnlyPassWithEmail()
     {
         // Given
-        Column<String> emailColumn = isEmailAddress();
+        Column emailColumn = isEmailAddress();
 
         // When
         String valid1 = "aA1@aA1-_.aA1.ab";
@@ -208,7 +336,7 @@ public class ColumnTest
         assertThat( columnCheckPassed( emailColumn, invalid10 ), is( false ) );
     }
 
-    private boolean columnCheckPassed( Column<?> columnCheck, String columnString )
+    private boolean columnCheckPassed( Column columnCheck, String columnString )
     {
         FailedCheckPolicy policy = new TerminateFailedCheckPolicy();
 
