@@ -326,11 +326,8 @@ public class SocialNetCheck implements Check
                 isLong().checkIn( tagsRef ) ) );
 
         // Person.id|email
-        // fileChecks.add( new ExpectedColumns( inDir(
-        // "person_email_emailaddress.csv" ), isLong().checkIn( personsRef ),
-        // isEmailAddress() ) );
         fileChecks.add( new ExpectedColumns( inDir( "person_email_emailaddress.csv" ), isLong().checkIn( personsRef ),
-                isString() ) );
+                isEmailAddress() ) );
 
         // Person.id|Tag.id
         fileChecks.add( new ExpectedColumns( inDir( "person_hasInterest_tag.csv" ), isLong().checkIn( personsRef ),
