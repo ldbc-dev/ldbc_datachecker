@@ -4,6 +4,8 @@ import static com.ldbc.datachecker.Column.*;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -22,6 +24,8 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
 
+import au.com.bytecode.opencsv.CSVWriter;
+
 import com.ldbc.datachecker.Check;
 import com.ldbc.datachecker.CheckRunner;
 import com.ldbc.datachecker.ColumnRef;
@@ -38,11 +42,13 @@ public class SocialNetCheck implements Check
 {
     private static final Logger logger = Logger.getLogger( SocialNetCheck.class );
 
+    private static final String CSV_FILENAME = "validation_errors.csv";
+    private static final char CSV_SEPARATOR = ';';
     private static final String DIR = "dir";
     private static final String TERMINATE = "terminate";
     private static final String LOG = "log";
 
-    public static void main( String[] args )
+    public static void main( String[] args ) throws IOException
     {
         Map<String, String> params = null;
         Options options = buildOptions();
@@ -98,6 +104,8 @@ public class SocialNetCheck implements Check
          */
         boolean logToFile = Boolean.parseBoolean( params.get( LOG ) );
 
+        CSVWriter csvWriter = null;
+
         FailedCheckPolicy policy = null;
         if ( true == terminateOnError )
         {
@@ -105,17 +113,11 @@ public class SocialNetCheck implements Check
         }
         else
         {
-            Logger fileLogger = null;
-            if ( true == logToFile )
+            if ( logToFile )
             {
-                fileLogger = Logger.getLogger( "file" );
-                // RollingFileAppender appender = ( (RollingFileAppender)
-                // fileLogger.getAppender( "file" ) );
-                // appender.setFile( logFile );
-                // appender.activateOptions();
+                csvWriter = createCSVWriter( CSV_FILENAME );
             }
-            policy = LoggingFailedCheckPolicy.toConsoleAndFile( logger, fileLogger );
-
+            policy = LoggingFailedCheckPolicy.toConsoleAndFile( logger, csvWriter );
         }
 
         // TODO 1
@@ -133,7 +135,17 @@ public class SocialNetCheck implements Check
             return;
         }
 
+        if ( null != csvWriter )
+        {
+            csvWriter.close();
+        }
         logger.info( "Check complete" );
+    }
+
+    private static CSVWriter createCSVWriter( String csvFilePath ) throws IOException
+    {
+        new File( csvFilePath ).delete();
+        return new CSVWriter( new FileWriter( csvFilePath ), CSV_SEPARATOR );
     }
 
     private static Options buildOptions()

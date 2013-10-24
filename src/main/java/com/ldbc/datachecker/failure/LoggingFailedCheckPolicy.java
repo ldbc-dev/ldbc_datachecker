@@ -5,6 +5,8 @@ import java.util.Arrays;
 
 import org.apache.log4j.Logger;
 
+import au.com.bytecode.opencsv.CSVWriter;
+
 import com.ldbc.datachecker.ColumnCheckException;
 import com.ldbc.datachecker.DirectoryCheck;
 import com.ldbc.datachecker.DirectoryCheckException;
@@ -15,16 +17,16 @@ import com.ldbc.datachecker.FileCheckException;
 public class LoggingFailedCheckPolicy implements FailedCheckPolicy
 {
     private final Logger consoleLogger;
-    private final Logger csvFileLogger;
+    private final CSVWriter csvWriter;
 
-    public static LoggingFailedCheckPolicy toConsoleAndFile( Logger consoleLogger, Logger csvFileLogger )
+    public static LoggingFailedCheckPolicy toConsoleAndFile( Logger consoleLogger, CSVWriter csvWriter )
     {
-        return new LoggingFailedCheckPolicy( consoleLogger, csvFileLogger );
+        return new LoggingFailedCheckPolicy( consoleLogger, csvWriter );
     }
 
-    public static LoggingFailedCheckPolicy toFileOnly( Logger csvFileLogger )
+    public static LoggingFailedCheckPolicy toFileOnly( CSVWriter csvWriter )
     {
-        return new LoggingFailedCheckPolicy( null, csvFileLogger );
+        return new LoggingFailedCheckPolicy( null, csvWriter );
     }
 
     public static LoggingFailedCheckPolicy toConsoleOnly( Logger consoleLogger )
@@ -32,45 +34,45 @@ public class LoggingFailedCheckPolicy implements FailedCheckPolicy
         return new LoggingFailedCheckPolicy( consoleLogger, null );
     }
 
-    private LoggingFailedCheckPolicy( Logger consoleLogger, Logger csvFileLogger )
+    private LoggingFailedCheckPolicy( Logger consoleLogger, CSVWriter csvWriter )
     {
         this.consoleLogger = consoleLogger;
-        this.csvFileLogger = csvFileLogger;
-        if ( null != csvFileLogger )
+        this.csvWriter = csvWriter;
+        if ( null != csvWriter )
         {
-            this.csvFileLogger.error( "Check;File;Line;Row;Column;Message" );
+            this.csvWriter.writeNext( "Check;File;Line;Row;Column;Message".split( ";" ) );
         }
     }
 
     @Override
     public FailedColumnCheckPolicy getFailedColumnCheckPolicy( FileCheck fileCheck, long lineNumber, String[] row )
     {
-        return new LoggingFailedColumnCheckPolicy( consoleLogger, csvFileLogger, fileCheck, lineNumber, row );
+        return new LoggingFailedColumnCheckPolicy( consoleLogger, csvWriter, fileCheck, lineNumber, row );
     }
 
     @Override
     public FailedFileCheckPolicy getFailedFileCheckPolicy()
     {
-        return new LoggingFailedFileCheckPolicy( consoleLogger, csvFileLogger );
+        return new LoggingFailedFileCheckPolicy( consoleLogger, csvWriter );
     }
 
     @Override
     public FailedDirectoryCheckPolicy getFailedDirectoryCheckPolicy()
     {
-        return new LoggingFailedDirectoryCheckPolicy( consoleLogger, csvFileLogger );
+        return new LoggingFailedDirectoryCheckPolicy( consoleLogger, csvWriter );
     }
 
     public static class LoggingFailedColumnCheckPolicy extends FailedColumnCheckPolicy
     {
         private final Logger consoleLogger;
-        private final Logger csvFileLogger;
+        private final CSVWriter csvWriter;
 
-        public LoggingFailedColumnCheckPolicy( Logger consoleLogger, Logger csvFileLogger, FileCheck fileCheck,
+        public LoggingFailedColumnCheckPolicy( Logger consoleLogger, CSVWriter csvWriter, FileCheck fileCheck,
                 long lineNumber, String[] row )
         {
             super( fileCheck, lineNumber, row );
             this.consoleLogger = consoleLogger;
-            this.csvFileLogger = csvFileLogger;
+            this.csvWriter = csvWriter;
         }
 
         public void handleFailedColumnCheck( String columnString, String message ) throws ColumnCheckException
@@ -81,12 +83,12 @@ public class LoggingFailedCheckPolicy implements FailedCheckPolicy
                         getFileCheck().getClass().getSimpleName(), getFileCheck().forFile().getAbsolutePath(),
                         getLineNumber(), Arrays.toString( getRow() ), columnString, message ) );
             }
-            if ( null != csvFileLogger )
+            if ( null != csvWriter )
             {
-                // Check;File;Line;Row;Column;Message
-                csvFileLogger.error( String.format( "%s;%s;%s;%s;%s;%s", getFileCheck().getClass().getSimpleName(),
-                        getFileCheck().forFile().getAbsolutePath(), getLineNumber(), Arrays.toString( getRow() ),
-                        columnString, message ) );
+                String[] nextLine = new String[] { getFileCheck().getClass().getSimpleName(),
+                        getFileCheck().forFile().getAbsolutePath(), Long.toString( getLineNumber() ),
+                        Arrays.toString( getRow() ), columnString, message };
+                csvWriter.writeNext( nextLine );
             }
         }
     }
@@ -94,12 +96,12 @@ public class LoggingFailedCheckPolicy implements FailedCheckPolicy
     public static class LoggingFailedFileCheckPolicy extends FailedFileCheckPolicy
     {
         private final Logger consoleLogger;
-        private final Logger csvFileLogger;
+        private final CSVWriter csvWriter;
 
-        public LoggingFailedFileCheckPolicy( Logger consoleLogger, Logger csvFileLogger )
+        public LoggingFailedFileCheckPolicy( Logger consoleLogger, CSVWriter csvWriter )
         {
             this.consoleLogger = consoleLogger;
-            this.csvFileLogger = csvFileLogger;
+            this.csvWriter = csvWriter;
         }
 
         @Override
@@ -112,11 +114,13 @@ public class LoggingFailedCheckPolicy implements FailedCheckPolicy
                         fileCheck.getClass().getSimpleName(), fileCheck.forFile(), lineNumber, Arrays.toString( row ),
                         message ) );
             }
-            if ( null != csvFileLogger )
+            if ( null != csvWriter )
             {
                 // Check;File;Line;Row;Column;Message
-                csvFileLogger.error( String.format( "%s;%s;%s;%s;;%s", fileCheck.getClass().getSimpleName(),
-                        fileCheck.forFile(), lineNumber, Arrays.toString( row ), message ) );
+                String[] nextLine = new String[] { fileCheck.getClass().getSimpleName(), fileCheck.forFile().getName(),
+                        Long.toString( lineNumber ), Arrays.toString( row ), message };
+                csvWriter.writeNext( nextLine );
+
             }
         }
 
@@ -128,11 +132,12 @@ public class LoggingFailedCheckPolicy implements FailedCheckPolicy
                 consoleLogger.error( String.format( "FileCheck[%s] File[%s] Message[%s]",
                         fileCheck.getClass().getSimpleName(), fileCheck.forFile(), message ) );
             }
-            if ( null != csvFileLogger )
+            if ( null != csvWriter )
             {
                 // Check;File;Line;Row;Column;Message
-                consoleLogger.error( String.format( "%s;%s;;;;%s", fileCheck.getClass().getSimpleName(),
-                        fileCheck.forFile(), message ) );
+                String[] nextLine = new String[] { fileCheck.getClass().getSimpleName(), fileCheck.forFile().getName(),
+                        "", "", "", message };
+                csvWriter.writeNext( nextLine );
             }
         }
     }
@@ -140,12 +145,12 @@ public class LoggingFailedCheckPolicy implements FailedCheckPolicy
     public static class LoggingFailedDirectoryCheckPolicy extends FailedDirectoryCheckPolicy
     {
         private final Logger consoleLogger;
-        private final Logger csvFileLogger;
+        private final CSVWriter csvWriter;
 
-        public LoggingFailedDirectoryCheckPolicy( Logger consoleLogger, Logger csvFileLogger )
+        public LoggingFailedDirectoryCheckPolicy( Logger consoleLogger, CSVWriter csvWriter )
         {
             this.consoleLogger = consoleLogger;
-            this.csvFileLogger = csvFileLogger;
+            this.csvWriter = csvWriter;
         }
 
         public void handleFailedDirectoryCheck( DirectoryCheck directoryCheck, File directory, String message )
@@ -156,11 +161,12 @@ public class LoggingFailedCheckPolicy implements FailedCheckPolicy
                 consoleLogger.error( String.format( "DirectoryCheck[%s] Directory[%s] Message[%s]",
                         directoryCheck.getClass().getSimpleName(), directory.getAbsolutePath(), message ) );
             }
-            if ( null != csvFileLogger )
+            if ( null != csvWriter )
             {
                 // Check;File;Line;Row;Column;Message
-                consoleLogger.error( String.format( "%s;%s;;;;%s", directoryCheck.getClass().getSimpleName(),
-                        directory.getAbsolutePath(), message ) );
+                String[] nextLine = new String[] { directoryCheck.getClass().getSimpleName(),
+                        directory.getAbsolutePath(), "", "", "", message };
+                csvWriter.writeNext( nextLine );
             }
         }
     }

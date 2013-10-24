@@ -17,6 +17,7 @@
 		<commmons-validator-version>1.4.0</commmons-validator-version>
 		<commmons-cli-version>1.2</commmons-cli-version>
 		<guava-version>15.0</guava-version>
+		<opencsv-version>2.0</opencsv-version>
 	</properties>
 
 
@@ -25,6 +26,11 @@
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
 			<version>${guava-version}</version>
+		</dependency>
+		<dependency>
+			<groupId>net.sf.opencsv</groupId>
+			<artifactId>opencsv</artifactId>
+			<version>${opencsv-version}</version>
 		</dependency>
 		<dependency>
 			<groupId>junit</groupId>
